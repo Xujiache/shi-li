@@ -1,0 +1,164 @@
+<view class="container">
+  <view class="state-card" wx:if="{{loading}}">
+    <view class="state-icon-wrap">
+      <image class="state-icon" src="/images/icons/question-hero.svg" mode="aspectFit"></image>
+    </view>
+    <text class="state-title">正在加载填写记录</text>
+    <text class="state-sub">系统正在获取当前问卷的历史答卷和详情，请稍候</text>
+  </view>
+
+  <view class="state-card" wx:elif="{{mode === 'list' && !childInfo._id}}">
+    <view class="state-icon-wrap">
+      <image class="state-icon" src="/images/icons/user.svg" mode="aspectFit"></image>
+    </view>
+    <text class="state-title">请先完善孩子档案</text>
+    <text class="state-sub">填写记录需要绑定到孩子档案后才能查看，请先完善学校、年级和班级信息</text>
+    <button class="state-btn" bindtap="goToProfile">去完善档案</button>
+  </view>
+
+  <block wx:elif="{{mode === 'list'}}">
+    <view class="hero">
+      <view class="hero-top">
+        <view class="hero-copy">
+          <text class="hero-kicker">填写记录</text>
+          <text class="hero-title">{{heroTitle}}</text>
+          <text class="hero-desc">{{heroDesc}}</text>
+        </view>
+        <view class="hero-icon-wrap">
+          <image class="hero-icon" src="/images/icons/question-hero.svg" mode="aspectFit"></image>
+        </view>
+      </view>
+
+      <view class="tag-row">
+        <block wx:for="{{heroTags}}" wx:key="*this">
+          <text class="tag">{{item}}</text>
+        </block>
+      </view>
+    </view>
+
+    <view class="empty-state-card" wx:if="{{submissions.length === 0}}">
+      <view class="empty-icon-wrap">
+        <image class="empty-icon" src="/images/icons/question.svg" mode="aspectFit"></image>
+      </view>
+      <text class="empty-title">暂无填写记录</text>
+      <text class="empty-sub">提交问卷后，这里会展示历史答卷和草稿记录</text>
+    </view>
+
+    <view class="list-wrap" wx:else>
+      <block wx:for="{{submissions}}" wx:key="_id">
+        <view class="submission-card" bindtap="openSubmissionDetail" data-id="{{item._id}}">
+          <view class="submission-head">
+            <view class="submission-icon-wrap">
+              <image class="submission-icon" src="/images/icons/question.svg" mode="aspectFit"></image>
+            </view>
+            <view class="submission-copy">
+              <view class="submission-title-row">
+                <text class="submission-title">{{item.attemptTitle}}</text>
+                <text class="status {{item.statusClass}}">{{item.statusText}}</text>
+              </view>
+              <text class="submission-name">{{item.child_name || '未命名孩子'}}</text>
+              <text class="submission-meta">{{item.schoolSummary || '未完善学校/年级/班级信息'}}</text>
+              <text class="submission-meta">{{item.timeText}}</text>
+            </view>
+          </view>
+
+          <view class="submission-stats">
+            <view class="submission-stat">
+              <text class="submission-stat-value">{{item.answered_count}}</text>
+              <text class="submission-stat-label">已答题</text>
+            </view>
+            <view class="submission-stat">
+              <text class="submission-stat-value">{{item.scoreText}}</text>
+              <text class="submission-stat-label">得分</text>
+            </view>
+            <view class="submission-stat">
+              <text class="submission-stat-value">{{item.required_answered_count}}</text>
+              <text class="submission-stat-label">必答完成</text>
+            </view>
+          </view>
+
+          <text class="submission-hint">{{item.cardHint}}</text>
+        </view>
+      </block>
+    </view>
+  </block>
+
+  <block wx:elif="{{mode === 'detail' && submission}}">
+    <view class="hero">
+      <view class="hero-top">
+        <view class="hero-copy">
+          <text class="hero-kicker">答卷详情</text>
+          <text class="hero-title">{{heroTitle}}</text>
+          <text class="hero-desc">{{heroDesc}}</text>
+        </view>
+        <view class="hero-icon-wrap">
+          <image class="hero-icon" src="/images/icons/question-hero.svg" mode="aspectFit"></image>
+        </view>
+      </view>
+
+      <view class="tag-row">
+        <block wx:for="{{heroTags}}" wx:key="*this">
+          <text class="tag">{{item}}</text>
+        </block>
+      </view>
+    </view>
+
+    <view class="summary-card">
+      <view class="summary-main">
+        <view class="summary-avatar">
+          <text class="summary-avatar-text">{{submission.initial}}</text>
+        </view>
+        <view class="summary-copy">
+          <text class="summary-name">{{submission.child_name || '未命名孩子'}}</text>
+          <text class="summary-desc">{{submission.schoolSummary || '未完善学校/年级/班级信息'}}</text>
+          <text class="summary-time">{{submission.timeText}}</text>
+        </view>
+      </view>
+
+      <view class="summary-grid">
+        <view class="summary-box">
+          <text class="summary-box-value">{{submission.statusText}}</text>
+          <text class="summary-box-label">状态</text>
+        </view>
+        <view class="summary-box">
+          <text class="summary-box-value">{{submission.answered_count}}</text>
+          <text class="summary-box-label">已答题</text>
+        </view>
+        <view class="summary-box">
+          <text class="summary-box-value">{{submission.scoreText}}</text>
+          <text class="summary-box-label">得分</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="empty-state-card" wx:if="{{answerCards.length === 0}}">
+      <view class="empty-icon-wrap">
+        <image class="empty-icon" src="/images/icons/question.svg" mode="aspectFit"></image>
+      </view>
+      <text class="empty-title">暂无答题内容</text>
+      <text class="empty-sub">这条记录还没有可展示的答题内容</text>
+    </view>
+
+    <view class="detail-wrap" wx:else>
+      <block wx:for="{{answerCards}}" wx:key="_id">
+        <view class="answer-card">
+          <view class="answer-head">
+            <view class="answer-index">{{item.displayIndex}}</view>
+            <view class="answer-copy">
+              <text class="answer-title">{{item.question_title || '未命名题目'}}</text>
+            </view>
+          </view>
+          <text class="answer-value">{{item.displayText}}</text>
+        </view>
+      </block>
+    </view>
+  </block>
+
+  <view class="state-card" wx:else>
+    <view class="state-icon-wrap">
+      <image class="state-icon" src="/images/icons/question.svg" mode="aspectFit"></image>
+    </view>
+    <text class="state-title">未找到填写记录</text>
+    <text class="state-sub">这条答卷可能已被删除，或当前记录暂不可查看</text>
+  </view>
+</view>

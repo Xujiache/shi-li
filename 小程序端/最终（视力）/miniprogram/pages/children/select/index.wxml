@@ -1,0 +1,37 @@
+<view class="page">
+  <view class="top-bg"></view>
+
+  <view class="wrap">
+    <view class="header-card">
+      <view class="header-title">选择孩子</view>
+      <view class="header-sub">一个账号可管理多个孩子</view>
+    </view>
+
+    <view class="section">
+      <view class="section-title">孩子列表</view>
+      <view class="grid" wx:if="{{children.length > 0}}">
+        <view class="child-item {{selectedChildId === item._id ? 'active' : ''}}" wx:for="{{children}}" wx:key="_id" catchtap="onSelect" data-id="{{item._id}}">
+          <view class="current-tag" wx:if="{{selectedChildId === item._id}}">当前</view>
+          <image class="child-avatar" src="{{item.avatar_url || item.avatar_file_id || '/images/avatar.png'}}" mode="aspectFill" />
+          <view class="child-right">
+            <view class="child-name">{{item.name || '未命名'}}</view>
+            <view class="child-id" wx:if="{{item.child_no}}">{{item.child_no}}</view>
+            <view class="btn-manage" catchtap="onManage" data-id="{{item._id}}">管理</view>
+          </view>
+        </view>
+      </view>
+
+      <view class="empty" wx:else>
+        <image class="empty-illus" src="/images/illustrations/empty-children.svg" mode="widthFix" />
+        <view class="empty-title">还没有添加孩子</view>
+        <view class="empty-sub">新增孩子后，才能预约与查看数据</view>
+      </view>
+    </view>
+
+    <view class="footer">
+      <button class="btn-primary" bindtap="onAdd">新增孩子</button>
+      <button class="btn-secondary" bindtap="onContinue" wx:if="{{selectedChildId}}">继续</button>
+    </view>
+  </view>
+</view>
+

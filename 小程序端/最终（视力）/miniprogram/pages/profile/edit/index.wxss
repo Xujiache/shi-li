@@ -1,0 +1,164 @@
+.container {
+  padding: 20rpx;
+  background: var(--bg-200, #f5f5f5);
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding-bottom: 220rpx;
+  align-items: stretch;
+}
+
+/* ── Hero ── */
+.hero {
+  background: linear-gradient(180deg, rgba(0,119,194,1) 0%, rgba(89,165,245,0.98) 55%, rgba(245,245,245,1) 100%);
+  border-bottom-left-radius: 48rpx;
+  border-bottom-right-radius: 48rpx;
+  padding: 28rpx 24rpx 24rpx;
+  margin: -20rpx -20rpx 18rpx;
+}
+.hero-top { padding: 12rpx 6rpx 18rpx; }
+.hero-title { font-size: 42rpx; font-weight: 800; color: #fff; display: block; }
+.hero-sub { margin-top: 10rpx; font-size: 26rpx; color: rgba(255,255,255,0.88); display: block; }
+.hero-card {
+  width: 100%; background: rgba(255,255,255,0.98); border-radius: 20rpx;
+  padding: 24rpx; display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 10rpx 30rpx rgba(0,0,0,0.10); box-sizing: border-box;
+}
+.hero-left { flex: 1; min-width: 0; }
+.hero-name { font-size: 34rpx; font-weight: 800; color: var(--text-100,#333); display: block; }
+.hero-meta { margin-top: 10rpx; font-size: 24rpx; color: var(--text-200,#888); display: block; }
+.hero-right { margin-left: 16rpx; flex-shrink: 0; }
+.hero-status { font-size: 24rpx; font-weight: 700; color: var(--primary-100,#0077c2); }
+
+/* ── Admin readonly ── */
+.admin-readonly {
+  background: rgba(0,119,194,0.03); border-radius: 14rpx; padding: 20rpx;
+  margin-top: 16rpx; border: 1px dashed rgba(0,119,194,0.15);
+}
+.admin-readonly-title {
+  font-size: 24rpx; font-weight: 700; color: var(--primary-100,#0077c2);
+  margin-bottom: 12rpx; display: block;
+}
+.admin-row { display: flex; gap: 12rpx; margin-bottom: 8rpx; flex-wrap: wrap; }
+.admin-label { font-size: 24rpx; color: var(--text-200,#888); flex-shrink: 0; }
+.admin-value { font-size: 24rpx; color: var(--text-100,#333); font-weight: 600; }
+.admin-plan {
+  font-size: 24rpx; color: var(--text-100,#333); line-height: 1.6;
+  margin-top: 8rpx; white-space: pre-wrap;
+}
+
+/* ── Card & collapsible ── */
+.card {
+  background: #fff; border-radius: 20rpx; margin-bottom: 16rpx;
+  box-shadow: 0 6rpx 18rpx rgba(0,0,0,0.05); overflow: hidden;
+}
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 24rpx; cursor: pointer;
+}
+.card-title { font-size: 30rpx; font-weight: 800; color: var(--text-100,#333); }
+.card-title-row { display: flex; align-items: center; gap: 12rpx; flex: 1; }
+.card-badge {
+  font-size: 22rpx; padding: 4rpx 14rpx; border-radius: 8rpx;
+  background: rgba(0,119,194,0.08); color: var(--primary-100,#0077c2); font-weight: 600;
+}
+.card-arrow {
+  font-size: 28rpx; color: var(--text-200,#999); transition: transform 0.25s;
+}
+.card-arrow.open { transform: rotate(90deg); }
+
+.card-body { padding: 0 24rpx; }
+.card-body.show { padding-bottom: 24rpx; max-height: 9999rpx; }
+.card-body.hide { max-height: 0; padding: 0 24rpx; overflow: hidden; }
+
+/* ── Form elements ── */
+ui-field, ui-picker-field { display: block; margin-bottom: 14rpx; }
+.input-item { margin-bottom: 14rpx; }
+
+.inline-row {
+  display: flex; align-items: center; gap: 20rpx; margin-bottom: 14rpx;
+}
+.inline-label { font-size: 26rpx; color: var(--text-200,#888); flex-shrink: 0; }
+.req { color: #ff4d4f; }
+.radio-group { display: flex; gap: 32rpx; }
+.radio-item { display: inline-flex; align-items: center; font-size: 28rpx; color: var(--text-100,#333); }
+
+.row-2 { display: flex; gap: 14rpx; margin-bottom: 14rpx; }
+.row-3 { display: flex; gap: 10rpx; margin-bottom: 14rpx; }
+.col { flex: 1; min-width: 0; }
+.row-2 ui-field, .row-3 ui-field, .row-2 ui-picker-field { margin-bottom: 0; }
+
+.sub-label {
+  font-size: 24rpx; font-weight: 700; color: var(--text-200,#666);
+  margin: 12rpx 0 8rpx; padding-left: 4rpx;
+}
+
+.field-label {
+  display: block; font-size: 24rpx; color: var(--text-200,#888); margin-bottom: 8rpx;
+}
+
+/* ── Picker ── */
+.picker-box {
+  min-height: 64rpx; line-height: 64rpx; padding: 0 20rpx;
+  border: 1px solid #e9e9e9; border-radius: 12rpx;
+  font-size: 28rpx; color: var(--text-100,#333); background: #fafafa;
+}
+.picker-box.sm { font-size: 26rpx; padding: 0 14rpx; min-height: 60rpx; line-height: 60rpx; }
+
+/* ── Pill (multi-select) ── */
+.pill-row { display: flex; flex-wrap: wrap; gap: 12rpx; margin-bottom: 14rpx; }
+.pill {
+  display: flex; align-items: center; gap: 8rpx;
+  padding: 12rpx 16rpx; border-radius: 14rpx;
+  border: 1px solid rgba(0,0,0,0.08); background: #fff;
+  font-size: 26rpx; color: var(--text-100,#333);
+}
+.pill:active { transform: scale(0.97); }
+.pill.on {
+  border-color: rgba(0,119,194,0.45);
+  background: rgba(0,119,194,0.04);
+}
+.pill-check {
+  width: 30rpx; height: 30rpx; border-radius: 8rpx;
+  border: 1px solid rgba(0,0,0,0.15); display: flex;
+  align-items: center; justify-content: center;
+  font-size: 22rpx; color: #fff; background: transparent;
+  flex-shrink: 0;
+}
+.pill.on .pill-check { border-color: rgba(0,119,194,0.8); background: rgba(0,119,194,1); }
+
+/* ── TCM severity grid ── */
+.tcm-grid { margin-bottom: 14rpx; }
+.tcm-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10rpx 0; border-bottom: 1px solid rgba(0,0,0,0.03);
+}
+.tcm-name { font-size: 24rpx; color: var(--text-100,#333); width: 190rpx; flex-shrink: 0; }
+.sev-row { display: flex; gap: 6rpx; }
+.sev {
+  padding: 8rpx 18rpx; border-radius: 10rpx; font-size: 22rpx;
+  color: var(--text-200,#999); background: #f5f5f5; border: 1px solid transparent;
+  text-align: center;
+}
+.sev:active { transform: scale(0.95); }
+.sev.on {
+  background: rgba(0,119,194,0.08); color: var(--primary-100,#0077c2);
+  border-color: rgba(0,119,194,0.25); font-weight: 700;
+}
+
+/* ── Textarea ── */
+.textarea {
+  width: 100%; min-height: 140rpx; border: 1px solid #e9e9e9;
+  border-radius: 12rpx; padding: 20rpx; font-size: 28rpx;
+  background: #fff; box-sizing: border-box;
+}
+
+/* ── Footer ── */
+.footer { margin-top: 12rpx; }
+.btn-primary {
+  width: 100%; background: var(--primary-100,#0077c2); color: #fff;
+  border-radius: 999rpx; height: 88rpx; line-height: 88rpx;
+  font-size: 32rpx; font-weight: 800;
+  box-shadow: 0 10rpx 26rpx rgba(0,119,194,0.25);
+}
+.btn-primary[disabled] { background: #b6c8d7; color: #fff; box-shadow: none; }
+.footer-tip { margin-top: 14rpx; text-align: center; color: var(--text-200,#888); font-size: 24rpx; }

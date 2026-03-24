@@ -1,0 +1,51 @@
+<view class="container">
+  <view class="card">
+    <view class="card-header">
+      <text class="card-title">预约报名</text>
+    </view>
+
+    <view class="card-body">
+      <view wx:if="{{childInfo._id}}">
+        <ui-field label="孩子姓名" required value="{{childName}}" placeholder="请输入孩子姓名" bind:change="onFieldChange" data-field="childName" />
+        <view class="gap"></view>
+        <ui-field label="孩子班级" required value="{{childClass}}" placeholder="请输入班级" bind:change="onFieldChange" data-field="childClass" />
+        <view class="gap"></view>
+      </view>
+      <view class="empty-profile" wx:else>
+        <text class="empty-text">未完善档案，部分功能将不可用</text>
+        <button class="btn-outline" bindtap="goToProfile">去完善档案</button>
+      </view>
+
+      <ui-picker-field
+        label="预约项目"
+        required
+        range="{{appointmentItems}}"
+        rangeKey="name"
+        valueIndex="{{itemIndex === null ? -1 : itemIndex}}"
+        displayText="{{itemIndex !== null ? appointmentItems[itemIndex].name : ''}}"
+        placeholder="请选择项目"
+        bind:change="onItemPickerChange"
+      />
+
+      <view class="gap"></view>
+
+      <ui-picker-field
+        wx:if="{{itemIndex !== null}}"
+        label="预约时间"
+        required
+        range="{{schedules}}"
+        rangeKey="displayTime"
+        valueIndex="{{scheduleIndex === null ? -1 : scheduleIndex}}"
+        displayText="{{scheduleIndex !== null ? schedules[scheduleIndex].displayTime : ''}}"
+        placeholder="请选择时间"
+        bind:change="onSchedulePickerChange"
+      />
+
+      <view class="gap"></view>
+
+      <ui-field label="联系电话" required type="number" value="{{phone}}" placeholder="请输入家长手机号" bind:change="onFieldChange" data-field="phone" />
+
+      <button class="btn-submit" bindtap="submitAppointment" disabled="{{!childInfo._id}}">立即预约</button>
+    </view>
+  </view>
+</view>

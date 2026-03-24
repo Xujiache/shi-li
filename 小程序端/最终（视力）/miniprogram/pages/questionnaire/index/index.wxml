@@ -1,0 +1,159 @@
+<view class="container">
+  <view class="hero">
+    <view class="hero-top">
+      <view class="hero-copy">
+        <text class="hero-kicker">问卷服务</text>
+        <text class="hero-title">问卷</text>
+        <text class="hero-sub">按年级派发 · 配置填写规则 · 留存填写记录</text>
+      </view>
+      <view class="hero-icon-wrap">
+        <image class="hero-icon" src="/images/icons/question.svg" mode="aspectFit"></image>
+      </view>
+    </view>
+
+    <view class="profile-panel" wx:if="{{childInfo._id}}">
+      <view class="profile-top-row">
+        <view class="avatar-badge">
+          <text class="avatar-text">{{childInitial}}</text>
+        </view>
+        <view class="profile-info">
+          <view class="profile-name-row">
+            <text class="profile-title">{{childInfo.name}}</text>
+            <text class="mini-tag">填写对象</text>
+          </view>
+          <text class="profile-meta">{{childSummary}}</text>
+        </view>
+        <button class="switch-btn" bindtap="goSelectChild">切换</button>
+      </view>
+      <view class="overview-row">
+        <view class="overview-item">
+          <text class="overview-value">{{overview.total}}</text>
+          <text class="overview-label">可填</text>
+        </view>
+        <view class="overview-divider"></view>
+        <view class="overview-item">
+          <text class="overview-value">{{overview.draftCount}}</text>
+          <text class="overview-label">草稿</text>
+        </view>
+        <view class="overview-divider"></view>
+        <view class="overview-item">
+          <text class="overview-value">{{overview.submittedCount}}</text>
+          <text class="overview-label">已交</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="profile-panel profile-panel-empty" wx:else>
+      <view class="profile-top-row">
+        <view class="avatar-badge avatar-badge-empty">
+          <image class="avatar-icon" src="/images/icons/user.svg" mode="aspectFit"></image>
+        </view>
+        <view class="profile-info">
+          <text class="profile-title">未找到孩子档案</text>
+          <text class="profile-meta">完善信息后系统自动匹配问卷</text>
+        </view>
+        <button class="switch-btn switch-btn-primary" bindtap="goToProfile">去完善</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-head">
+      <view class="section-copy">
+        <text class="section-title">问卷中心</text>
+        <text class="section-sub">显示当前孩子可填写的全部问卷</text>
+      </view>
+      <text class="section-badge" wx:if="{{childInfo._id}}">{{overview.total}} 份</text>
+    </view>
+
+    <view class="state-card" wx:if="{{loading}}">
+      <view class="state-icon-wrap">
+        <image class="state-icon" src="/images/icons/question.svg" mode="aspectFit"></image>
+      </view>
+      <text class="state-title">正在加载问卷</text>
+      <text class="state-sub">系统正在根据当前孩子档案匹配可填写问卷，请稍候</text>
+    </view>
+
+    <view class="state-card" wx:elif="{{!childInfo._id}}">
+      <view class="state-icon-wrap">
+        <image class="state-icon" src="/images/icons/user.svg" mode="aspectFit"></image>
+      </view>
+      <text class="state-title">请先选择或完善孩子档案</text>
+      <text class="state-sub">系统需要根据学校、年级和班级来匹配可填写问卷</text>
+      <button class="state-btn" bindtap="goToProfile">去完善档案</button>
+    </view>
+
+    <view class="state-card" wx:elif="{{questionnaires.length === 0}}">
+      <view class="state-icon-wrap">
+        <image class="state-icon" src="/images/icons/question.svg" mode="aspectFit"></image>
+      </view>
+      <text class="state-title">暂无可填写问卷</text>
+      <text class="state-sub">当前孩子暂未命中已发布问卷，可稍后再来查看</text>
+    </view>
+
+    <view class="card-list" wx:else>
+      <block wx:for="{{questionnaires}}" wx:key="_id">
+        <view class="questionnaire-card">
+          <view class="card-cover" wx:if="{{item.hasCoverImage}}">
+            <image class="card-cover-image" src="{{item.coverImageUrl}}" mode="aspectFill"></image>
+            <view class="card-cover-mask"></view>
+            <view class="card-cover-meta">
+              <text class="card-cover-label">问卷封面</text>
+            </view>
+            <text class="status-tag status-tag-overlay">{{item.statusText}}</text>
+          </view>
+
+          <view class="card-header">
+            <view class="card-icon-wrap" wx:if="{{!item.hasCoverImage}}">
+              <image class="card-icon" src="/images/icons/question.svg" mode="aspectFit"></image>
+            </view>
+            <view class="card-title-wrap">
+              <view class="card-title-row">
+                <text class="card-title">{{item.title}}</text>
+                <text class="status-tag" wx:if="{{!item.hasCoverImage}}">{{item.statusText}}</text>
+              </view>
+              <text class="card-desc" wx:if="{{item.description}}">{{item.description}}</text>
+              <text class="card-desc card-desc-placeholder" wx:else>支持按孩子档案自动匹配并保留填写记录</text>
+            </view>
+          </view>
+
+          <view class="info-grid">
+            <view class="info-chip">
+              <text class="info-label">派发规则</text>
+              <text class="info-value">{{item.ruleName}}</text>
+            </view>
+            <view class="info-chip">
+              <text class="info-label">提交规则</text>
+              <text class="info-value">{{item.submitRuleText}}</text>
+            </view>
+          </view>
+
+          <view class="stats-panel">
+            <view class="stat-box">
+              <text class="stat-value">{{item.draftCount}}</text>
+              <text class="stat-label">草稿</text>
+            </view>
+            <view class="stat-box">
+              <text class="stat-value">{{item.submittedCount}}</text>
+              <text class="stat-label">已提交</text>
+            </view>
+            <view class="stat-box">
+              <text class="stat-value">{{item.recordTotal}}</text>
+              <text class="stat-label">总记录</text>
+            </view>
+          </view>
+
+          <view class="card-footer">
+            <text class="card-hint">{{item.actionHint}}</text>
+            <view class="btn-row">
+              <button class="ghost-btn small" bindtap="openHistory" data-id="{{item._id}}">填写记录</button>
+              <button class="primary-btn small" bindtap="openQuestionnaire" data-id="{{item._id}}">
+                {{item.actionText}}
+              </button>
+            </view>
+          </view>
+        </view>
+      </block>
+    </view>
+  </view>
+</view>

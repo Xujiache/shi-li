@@ -1,0 +1,177 @@
+<view class="container">
+  <view class="top-bg"></view>
+  <view class="main-content">
+    <view class="hero-top">
+      <view class="hero-title">数据看板</view>
+      <view class="hero-sub">最新检测概览 · 趋势对比</view>
+    </view>
+
+    <!-- 看板骨架屏 -->
+    <block wx:if="{{isLoading}}">
+      <!-- 顶部个人模块骨架 -->
+      <view style="height: 140rpx; border-radius: 28rpx; margin-bottom: 24rpx; padding: 32rpx; display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; background: rgba(255,255,255,0.95);">
+        <view style="width: 50%;">
+           <view class="sk-pulse" style="width: 70%; height: 36rpx; border-radius: 8rpx; margin-bottom: 16rpx;"></view>
+           <view class="sk-pulse" style="width: 40%; height: 24rpx; border-radius: 8rpx;"></view>
+        </view>
+        <view style="width: 25%; display: flex; flex-direction: column; align-items: flex-end;">
+           <view class="sk-pulse" style="width: 80%; height: 28rpx; border-radius: 8rpx; margin-bottom: 12rpx;"></view>
+           <view class="sk-pulse" style="width: 50%; height: 24rpx; border-radius: 8rpx;"></view>
+        </view>
+      </view>
+
+      <!-- 三个指标块骨架 -->
+      <view style="display: flex; gap: 16rpx; margin-bottom: 24rpx;">
+         <view wx:for="{{[1,2,3]}}" wx:key="*this" style="flex: 1; height: 200rpx; border-radius: 28rpx; padding: 30rpx 24rpx; box-sizing: border-box; background: rgba(255,255,255,0.95);">
+            <view class="sk-pulse" style="width: 60%; height: 24rpx; border-radius: 8rpx; margin-bottom: 30rpx;"></view>
+            <view class="sk-pulse" style="width: 90%; height: 48rpx; border-radius: 8rpx; margin-bottom: 24rpx;"></view>
+            <view class="sk-pulse" style="width: 40%; height: 20rpx; border-radius: 6rpx;"></view>
+         </view>
+      </view>
+
+      <!-- 屈光度大卡片骨架 -->
+      <view style="height: 380rpx; border-radius: 28rpx; margin-bottom: 24rpx; padding: 32rpx; display: flex; flex-direction: column; box-sizing: border-box; background: rgba(255,255,255,0.95);">
+          <view class="sk-pulse" style="width: 25%; height: 32rpx; border-radius: 8rpx; margin-bottom: 30rpx;"></view>
+          <view style="display: flex; gap: 16rpx; flex: 1;">
+              <view class="sk-pulse" style="flex: 1; border-radius: 16rpx;"></view>
+              <view class="sk-pulse" style="flex: 1; border-radius: 16rpx;"></view>
+          </view>
+      </view>
+    </block>
+
+    <!-- 真实内容展示 -->
+    <block wx:else>
+      <view class="hero-card" wx:if="{{childInfo._id}}">
+        <view class="hero-left">
+          <text class="hero-name">{{childInfo.name || '—'}}</text>
+          <text class="hero-meta">{{childInfo.school || ''}} · {{childInfo.class_name || ''}}</text>
+        </view>
+        <view class="hero-right">
+          <text class="hero-date">{{latestRecord && latestRecord.date ? latestRecord.date : '—'}}</text>
+          <text class="hero-date-sub">最新检测</text>
+        </view>
+      </view>
+
+      <view class="hero-card" wx:else bindtap="goToProfile">
+        <view class="hero-left">
+          <text class="hero-name">未完善档案</text>
+          <text class="hero-meta">完善后可查看检测数据与趋势</text>
+        </view>
+        <view class="hero-right">
+          <text class="hero-cta">去完善</text>
+          <text class="hero-arrow">></text>
+        </view>
+      </view>
+
+      <view wx:if="{{childInfo._id}}">
+        <view class="metrics">
+          <view class="metric-card">
+            <text class="k">左眼视力</text>
+            <view class="v-row">
+              <text class="v">{{latestRecord && latestRecord.vision_l ? latestRecord.vision_l : '—'}}</text>
+              <view class="t-wrapper up" wx:if="{{compare.vision_l === '↑'}}"><text class="t">↑</text></view>
+              <view class="t-wrapper down" wx:elif="{{compare.vision_l === '↓'}}"><text class="t">↓</text></view>
+              <view class="t-wrapper flat" wx:elif="{{compare.vision_l}}"><text class="t">—</text></view>
+            </view>
+            <text class="sub" wx:if="{{previousRecord}}">上次：{{previousRecord.vision_l || '—'}}</text>
+            <text class="sub" wx:else>暂无对比数据</text>
+          </view>
+
+          <view class="metric-card">
+            <text class="k">右眼视力</text>
+            <view class="v-row">
+              <text class="v">{{latestRecord && latestRecord.vision_r ? latestRecord.vision_r : '—'}}</text>
+              <view class="t-wrapper up" wx:if="{{compare.vision_r === '↑'}}"><text class="t">↑</text></view>
+              <view class="t-wrapper down" wx:elif="{{compare.vision_r === '↓'}}"><text class="t">↓</text></view>
+              <view class="t-wrapper flat" wx:elif="{{compare.vision_r}}"><text class="t">—</text></view>
+            </view>
+            <text class="sub" wx:if="{{previousRecord}}">上次：{{previousRecord.vision_r || '—'}}</text>
+            <text class="sub" wx:else>暂无对比数据</text>
+          </view>
+
+          <view class="metric-card">
+            <text class="k">身高 / 体重</text>
+            <view class="v-row">
+              <text class="v small">{{latestRecord && latestRecord.height ? latestRecord.height : '—'}} / {{latestRecord && latestRecord.weight ? latestRecord.weight : '—'}}</text>
+            </view>
+            <text class="sub">单位：cm / kg</text>
+          </view>
+        </view>
+
+        <view class="card" wx:if="{{records.length === 0}}">
+          <view class="empty-state">
+            <text class="empty-title">暂无检测记录</text>
+            <text class="empty-sub">填写一份记录档案后，这里会自动生成看板</text>
+            <button class="btn-primary" bindtap="goToNewRecord">新增记录</button>
+          </view>
+        </view>
+
+        <view wx:else>
+          <view class="card">
+            <view class="card-title">屈光度</view>
+            <view class="grid-2">
+              <view class="box">
+                <text class="box-title">右眼</text>
+                <view class="kv"><text class="kk">S</text><text class="vv">{{latestRecord.refraction_r.s || '—'}}</text></view>
+                <view class="kv"><text class="kk">C</text><text class="vv">{{latestRecord.refraction_r.c || '—'}}</text></view>
+                <view class="kv"><text class="kk">A</text><text class="vv">{{latestRecord.refraction_r.a || '—'}}</text></view>
+              </view>
+              <view class="box">
+                <text class="box-title">左眼</text>
+                <view class="kv"><text class="kk">S</text><text class="vv">{{latestRecord.refraction_l.s || '—'}}</text></view>
+                <view class="kv"><text class="kk">C</text><text class="vv">{{latestRecord.refraction_l.c || '—'}}</text></view>
+                <view class="kv"><text class="kk">A</text><text class="vv">{{latestRecord.refraction_l.a || '—'}}</text></view>
+              </view>
+            </view>
+          </view>
+
+          <view class="card">
+            <view class="card-title">诊断与建议</view>
+            <view class="pill-row">
+              <view class="pill">裸眼视力：{{latestRecord.diagnosis.vision_status || '—'}}</view>
+              <view class="pill">屈光度：{{latestRecord.diagnosis.refraction_status || '—'}}</view>
+              <view class="pill">眼位：{{latestRecord.diagnosis.axis_status || '—'}}</view>
+              <view class="pill">角膜曲率：{{latestRecord.diagnosis.cornea_status || '—'}}</view>
+            </view>
+            <view class="note" wx:if="{{latestRecord.conclusion}}">{{latestRecord.conclusion}}</view>
+            <view class="note placeholder" wx:else>暂无结论/建议</view>
+          </view>
+
+          <view class="card">
+            <view class="card-title">快速操作</view>
+            <view class="btn-row">
+              <button class="btn-outline" bindtap="goToHistory">历史记录</button>
+              <button class="btn-primary" bindtap="goToNewRecord">新增记录</button>
+            </view>
+          </view>
+
+          <view class="compare-card" wx:if="{{records.length >= 2}}">
+            <view class="compare-title">最近两次对比</view>
+            <view class="compare-row">
+              <text class="ck">检测日期</text>
+              <text class="cv">{{latestRecord.date}}</text>
+              <text class="cv2">{{previousRecord.date}}</text>
+              <view class="ct-placeholder"></view>
+            </view>
+            <view class="compare-row">
+              <text class="ck">左眼视力</text>
+              <text class="cv">{{latestRecord.vision_l || '—'}}</text>
+              <text class="cv2">{{previousRecord.vision_l || '—'}}</text>
+              <view class="ct-badge {{compare.vision_l === '↑' ? 'up' : compare.vision_l === '↓' ? 'down' : 'flat'}}">
+                <text class="ct">{{compare.vision_l}}</text>
+              </view>
+            </view>
+            <view class="compare-row">
+              <text class="ck">右眼视力</text>
+              <text class="cv">{{latestRecord.vision_r || '—'}}</text>
+              <text class="cv2">{{previousRecord.vision_r || '—'}}</text>
+              <view class="ct-badge {{compare.vision_r === '↑' ? 'up' : compare.vision_r === '↓' ? 'down' : 'flat'}}">
+                <text class="ct">{{compare.vision_r}}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </block>
+  </view>
+</view>

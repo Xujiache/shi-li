@@ -1,0 +1,61 @@
+{
+  "pages": [
+    "pages/auth/login/index",
+    "pages/home/index/index",
+    "pages/appointment/list/index",
+    "pages/appointment/book/index",
+    "pages/dashboard/index/index",
+    "pages/children/select/index",
+    "pages/records/edit/index",
+    "pages/profile/edit/index",
+    "pages/history/list/index",
+    "pages/questionnaire/index/index",
+    "pages/questionnaire/detail/index",
+    "pages/questionnaire/fill/index",
+    "pages/questionnaire/history/index",
+    "pages/user/index/index",
+    "pages/user/appointments/index"
+  ],
+  "window": {
+    "backgroundColor": "#F6F6F6",
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#0077C2",
+    "navigationBarTitleText": "儿童视力管理",
+    "navigationBarTextStyle": "white"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#999999",
+    "selectedColor": "#0077C2",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/home/index/index",
+        "text": "首页",
+        "iconPath": "images/wechat_login.png",
+        "selectedIconPath": "images/wechat_login.png"
+      },
+      {
+        "pagePath": "pages/history/list/index",
+        "text": "数据",
+        "iconPath": "images/wechat_login.png",
+        "selectedIconPath": "images/wechat_login.png"
+      },
+      {
+        "pagePath": "pages/questionnaire/index/index",
+        "text": "问卷",
+        "iconPath": "images/wechat_login.png",
+        "selectedIconPath": "images/wechat_login.png"
+      },
+      {
+        "pagePath": "pages/user/index/index",
+        "text": "我的",
+        "iconPath": "images/wechat_login.png",
+        "selectedIconPath": "images/wechat_login.png"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents"
+}

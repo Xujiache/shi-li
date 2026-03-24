@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "个人档案",
+  "usingComponents": {
+    "ui-field": "/components/ui-field/index",
+    "ui-picker-field": "/components/ui-picker-field/index"
+  }
+}

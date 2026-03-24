@@ -1,0 +1,117 @@
+<view class="container">
+  <view class="top-bg"></view>
+
+  <view class="profile-card">
+    <view class="profile-left-section">
+      <view class="avatar-wrapper" catchtap="onChangeAvatar">
+        <image class="avatar" src="{{avatarUrl || '/images/avatar.png'}}" mode="aspectFill"></image>
+        <view class="camera-badge">
+           <image class="camera-icon" src="/images/icons/camera.svg" mode="aspectFit"></image>
+        </view>
+      </view>
+      <view class="info-wrapper">
+        <view class="name-wrapper">
+           <text class="name">{{childInfo.name || '请选择孩子'}}</text>
+           <view class="edit-btn" bindtap="onEditName" wx:if="{{childInfo._id}}">
+             <image class="edit-icon" src="/images/icons/edit-pen.svg" mode="aspectFit"></image>
+           </view>
+        </view>
+        <view class="meta-wrapper">
+           <view class="meta-item" wx:if="{{userProfile.user_no}}">ID: {{userProfile.user_no}}</view>
+           <view class="meta-item" wx:if="{{userPhoneMasked}}">{{userPhoneMasked}}</view>
+        </view>
+      </view>
+    </view>
+    <view class="profile-right-section">
+      <view class="manage-btn" bindtap="goSelectChild">
+        <text>管理档案</text>
+        <text class="arrow">></text>
+      </view>
+    </view>
+  </view>
+
+  <view class="quick-grid">
+    <view class="quick-item" bindtap="goToProfile">
+      <image class="quick-icon" src="/images/icons/profile.svg" mode="aspectFit"></image>
+      <text class="quick-text">档案管理</text>
+    </view>
+    <view class="quick-item" bindtap="goToAppointments">
+      <image class="quick-icon" src="/images/icons/records.svg" mode="aspectFit"></image>
+      <text class="quick-text">我的预约</text>
+    </view>
+    <view class="quick-item" bindtap="goToDashboard">
+      <image class="quick-icon" src="/images/icons/dashboard.svg" mode="aspectFit"></image>
+      <text class="quick-text">健康看板</text>
+    </view>
+    <view class="quick-item" bindtap="goSelectChild">
+      <image class="quick-icon" src="/images/icons/user-active.svg" mode="aspectFit"></image>
+      <text class="quick-text">孩子管理</text>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">更多</view>
+    <view class="menu-list">
+      <view class="menu-item" bindtap="showUserAgreement">
+        <view class="left">
+          <image class="icon" src="/images/icons/agreement.svg" mode="aspectFit"></image>
+          <text>用户协议</text>
+        </view>
+        <text class="arrow">></text>
+      </view>
+
+      <view class="menu-item" bindtap="showPrivacyPolicy">
+        <view class="left">
+          <image class="icon" src="/images/icons/share.svg" mode="aspectFit"></image>
+          <text>隐私政策</text>
+        </view>
+        <text class="arrow">></text>
+      </view>
+
+      <view class="menu-item" bindtap="showChildPrivacyPolicy">
+        <view class="left">
+          <image class="icon" src="/images/icons/user.svg" mode="aspectFit"></image>
+          <text>儿童隐私政策</text>
+        </view>
+        <text class="arrow">></text>
+      </view>
+
+      <view class="menu-item" bindtap="goToAbout">
+        <view class="left">
+          <image class="icon" src="/images/icons/help.svg" mode="aspectFit"></image>
+          <text>关于与帮助</text>
+        </view>
+        <text class="arrow">></text>
+      </view>
+
+      <view class="menu-item danger {{logoutPressed ? 'pressed' : ''}}" bindtap="handleLogout" bindtouchstart="onLogoutPress" bindtouchend="onLogoutRelease" bindtouchcancel="onLogoutRelease">
+        <view class="left">
+          <image class="icon" src="{{logoutIconSrc}}" mode="aspectFit"></image>
+          <text>退出登录</text>
+        </view>
+        <text class="arrow">></text>
+      </view>
+    </view>
+  </view>
+
+  <view class="footer-version">v1.0.0</view>
+
+  <view class="modal-mask" wx:if="{{showNameModal}}" catchtap="closeNameModal"></view>
+  <view class="modal" wx:if="{{showNameModal}}">
+    <view class="modal-title">修改姓名</view>
+    <input class="modal-input" value="{{nameDraft}}" maxlength="20" placeholder="请输入姓名" bindinput="onNameInput" />
+    <view class="modal-actions">
+      <button class="modal-btn ghost" bindtap="closeNameModal">取消</button>
+      <button class="modal-btn primary" bindtap="saveName">保存</button>
+    </view>
+  </view>
+
+  <view class="agreement-modal-mask" wx:if="{{showAgreementModal}}" catchtap="closeAgreementModal"></view>
+  <view class="agreement-modal" wx:if="{{showAgreementModal}}">
+    <view class="agreement-modal-title">{{agreementTitle}}</view>
+    <scroll-view scroll-y class="agreement-modal-body">
+      <text>{{agreementContent}}</text>
+    </scroll-view>
+    <button class="agreement-modal-btn" bindtap="closeAgreementModal">我知道了</button>
+  </view>
+</view>

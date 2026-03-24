@@ -1,0 +1,158 @@
+<view class="container">
+  <view class="state-card" wx:if="{{loading}}">
+    <view class="state-icon-wrap">
+      <image class="state-icon" src="/images/icons/question-tab-active.svg" mode="aspectFit"></image>
+    </view>
+    <text class="state-title">正在加载问卷信息</text>
+    <text class="state-sub">系统正在获取问卷详情、填写对象和历史记录，请稍候</text>
+  </view>
+
+  <view class="state-card" wx:elif="{{!childInfo._id}}">
+    <view class="state-icon-wrap">
+      <image class="state-icon" src="/images/icons/user.svg" mode="aspectFit"></image>
+    </view>
+    <text class="state-title">请先完善孩子档案</text>
+    <text class="state-sub">问卷预览需要根据当前孩子的学校、年级和班级来匹配适用规则</text>
+    <view class="state-btn-row">
+      <button class="ghost-btn state-small-btn" bindtap="goSelectChild">切换孩子</button>
+      <button class="primary-btn state-small-btn" bindtap="goToProfile">去完善档案</button>
+    </view>
+  </view>
+
+  <block wx:elif="{{questionnaire}}">
+    <view class="hero">
+      <view class="hero-top">
+        <view class="hero-copy">
+          <text class="hero-kicker">填写预览</text>
+          <text class="hero-title">{{questionnaire.title}}</text>
+          <text class="hero-desc">{{questionnaireDesc}}</text>
+        </view>
+        <view class="hero-icon-wrap">
+          <image class="hero-icon" src="/images/icons/question-hero.svg" mode="aspectFit"></image>
+        </view>
+      </view>
+
+      <view class="tag-row">
+        <text class="tag">{{statusText}}</text>
+        <text class="tag">{{remainingText}}</text>
+        <text class="tag light">共 {{overview.totalPages}} 页</text>
+      </view>
+    </view>
+
+    <view class="overview-card">
+      <view class="overview-item">
+        <text class="overview-value">{{overview.totalPages}}</text>
+        <text class="overview-label">分页数</text>
+      </view>
+      <view class="overview-divider"></view>
+      <view class="overview-item">
+        <text class="overview-value">{{overview.totalQuestions}}</text>
+        <text class="overview-label">题目数</text>
+      </view>
+      <view class="overview-divider"></view>
+      <view class="overview-item">
+        <text class="overview-value">{{overview.historyCount}}</text>
+        <text class="overview-label">历史提交</text>
+      </view>
+    </view>
+
+    <view class="card subject-card">
+      <view class="card-head">
+        <view class="card-copy">
+          <text class="card-title">填写对象</text>
+          <text class="card-subtitle">问卷提交结果将绑定到当前孩子档案</text>
+        </view>
+        <button class="head-btn" bindtap="goSelectChild">切换孩子</button>
+      </view>
+
+      <view class="subject-main">
+        <view class="subject-avatar">
+          <text class="subject-avatar-text">{{childInitial}}</text>
+        </view>
+        <view class="subject-copy">
+          <text class="subject-name">{{childInfo.name}}</text>
+          <text class="subject-meta">{{childSummary}}</text>
+          <view class="subject-tags">
+            <text class="mini-tag">当前填写对象</text>
+            <text class="mini-tag light">自动匹配规则</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="info-grid">
+        <view class="info-item">
+          <text class="info-label">派发规则</text>
+          <text class="info-value">{{matchedRuleName}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">提交规则</text>
+          <text class="info-value">{{ruleText}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="card structure-card">
+      <view class="card-head">
+        <view class="card-copy">
+          <text class="card-title">问卷结构</text>
+          <text class="card-subtitle">填写前可先浏览每一页的内容安排</text>
+        </view>
+        <text class="head-badge">{{overview.totalQuestions}} 题</text>
+      </view>
+
+      <block wx:for="{{sectionCards}}" wx:key="pageNo">
+        <view class="section-card">
+          <view class="section-index">{{item.displayIndex}}</view>
+          <view class="section-body">
+            <view class="section-top">
+              <text class="section-name">{{item.title}}</text>
+              <text class="section-page">{{item.pageText}}</text>
+            </view>
+            <text class="section-desc">{{item.descriptionText}}</text>
+            <view class="section-meta-row">
+              <text class="section-meta-pill">题目数：{{item.questionCount}}</text>
+              <text class="section-meta-pill light">预览页</text>
+            </view>
+          </view>
+        </view>
+      </block>
+    </view>
+
+    <view class="card record-card">
+      <view class="card-head">
+        <view class="card-copy">
+          <text class="card-title">填写记录</text>
+          <text class="card-subtitle">可继续未完成草稿，也可以查看已提交历史</text>
+        </view>
+      </view>
+
+      <view class="record-grid">
+        <view class="record-box">
+          <text class="record-value">{{draftCount}}</text>
+          <text class="record-label">草稿</text>
+        </view>
+        <view class="record-box">
+          <text class="record-value">{{submittedCount}}</text>
+          <text class="record-label">已提交</text>
+        </view>
+      </view>
+
+      <text class="record-hint">{{actionHint}}</text>
+    </view>
+
+    <view class="action-card floating-action-card">
+      <button class="ghost-btn" bindtap="goHistory">查看历史</button>
+      <button class="primary-btn" bindtap="goFill" disabled="{{!canStart && !draftSubmissionId}}">
+        {{actionText}}
+      </button>
+    </view>
+  </block>
+
+  <view class="state-card" wx:else>
+    <view class="state-icon-wrap">
+      <image class="state-icon" src="/images/icons/question-tab-active.svg" mode="aspectFit"></image>
+    </view>
+    <text class="state-title">未找到问卷信息</text>
+    <text class="state-sub">该问卷可能已下线，或当前孩子暂不在问卷的可填写范围内</text>
+  </view>
+</view>

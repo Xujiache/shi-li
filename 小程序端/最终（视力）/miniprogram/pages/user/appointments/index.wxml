@@ -1,0 +1,56 @@
+<view class="page">
+  <view class="top-bg"></view>
+
+  <view class="wrap">
+    <view class="header-card">
+      <view class="header-row">
+        <view>
+          <view class="title">我的预约</view>
+          <view class="subtitle">按当前孩子筛选</view>
+        </view>
+        <button class="btn-ghost" bindtap="goSelectChild">切换孩子</button>
+      </view>
+
+      <view class="child-pill" wx:if="{{childInfo._id}}">
+        <text class="child-name">{{childInfo.name || '未命名'}}</text>
+        <text class="child-meta">{{childInfo.school || '未填写学校'}} · {{childInfo.class_name || '未填写班级'}}</text>
+      </view>
+      <view class="child-pill empty" wx:else>
+        <text class="child-name">未选择孩子</text>
+        <text class="child-meta">先选择或新增孩子档案</text>
+      </view>
+    </view>
+
+    <view class="list-card">
+      <view class="skeleton" wx:if="{{loading}}">
+        <view class="sk-item"></view>
+        <view class="sk-item"></view>
+      </view>
+
+      <block wx:if="{{!loading && appointments.length > 0}}">
+        <block wx:for="{{appointments}}" wx:key="_id">
+          <view class="appt-card">
+            <view class="appt-top">
+              <text class="appt-title">{{item.item_name}}</text>
+              <text class="badge {{item.status === 'confirmed' ? 'ok' : 'muted'}}">{{item.status === 'confirmed' ? '预约成功' : item.status}}</text>
+            </view>
+            <view class="appt-row">
+              <text class="k">时间</text>
+              <text class="v">{{item.date}} {{item.time_slot}}</text>
+            </view>
+            <view class="appt-row">
+              <text class="k">电话</text>
+              <text class="v">{{item.phone}}</text>
+            </view>
+          </view>
+        </block>
+      </block>
+
+      <view class="empty-state" wx:if="{{!loading && appointments.length === 0}}">
+        <view class="empty-title">暂无预约记录</view>
+        <view class="empty-sub">你可以去预约项目列表选择时间</view>
+        <button class="btn-primary" bindtap="goToBook">去预约</button>
+      </view>
+    </view>
+  </view>
+</view>

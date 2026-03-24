@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "预约报名",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "ui-field": "/components/ui-field/index",
+    "ui-picker-field": "/components/ui-picker-field/index"
+  }
+}

@@ -1,0 +1,29 @@
+<view class="field {{disabled ? 'is-disabled' : ''}} {{focused ? 'is-focus' : ''}} {{error ? 'is-error' : ''}}">
+  <view class="label-row" wx:if="{{label}}">
+    <text class="label">{{label}}</text>
+    <text class="required" wx:if="{{required}}">*</text>
+    <text class="meta" wx:if="{{meta}}">{{meta}}</text>
+  </view>
+
+  <view class="control">
+    <input
+      class="input"
+      value="{{value}}"
+      type="{{type}}"
+      password="{{password}}"
+      placeholder="{{placeholder}}"
+      placeholder-style="{{placeholderStyle}}"
+      disabled="{{disabled}}"
+      maxlength="{{maxlength}}"
+      bindinput="onInput"
+      bindfocus="onFocus"
+      bindblur="onBlur"
+      cursor-spacing="12"
+    />
+  </view>
+
+  <view class="help" wx:if="{{helper || errorText}}">
+    <text class="help-text {{errorText ? 'err' : ''}}">{{errorText || helper}}</text>
+  </view>
+</view>
+

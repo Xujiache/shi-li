@@ -1,0 +1,160 @@
+<view class="container">
+  <view class="hero">
+    <view class="hero-top">
+      <text class="hero-title">记录档案</text>
+      <text class="hero-sub">填写后可在数据看板查看</text>
+    </view>
+
+    <view class="hero-card" wx:if="{{childInfo._id}}">
+      <view class="hero-left">
+        <text class="hero-name">{{childInfo.name || '—'}}</text>
+        <text class="hero-meta">{{childInfo.school || '—'}} · {{childInfo.class_name || '—'}}</text>
+      </view>
+      <view class="hero-right">
+        <text class="hero-status">{{mode === 'update' ? '修改记录' : '新增记录'}}</text>
+        <text class="hero-action" bindtap="changeChild">切换孩子 ></text>
+      </view>
+    </view>
+
+    <view class="hero-card" wx:else>
+      <view class="hero-left">
+        <text class="hero-name">未选择孩子</text>
+        <text class="hero-meta">请先选择档案后再填写记录</text>
+      </view>
+      <view class="hero-right">
+        <text class="hero-action" bindtap="changeChild">去选择 ></text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">检测信息</view>
+    <ui-picker-field
+      label="检测日期"
+      required
+      mode="date"
+      placeholder="请选择日期"
+      value="{{form.date}}"
+      displayText="{{form.date}}"
+      error="{{!!errors.date}}"
+      errorText="{{errors.date}}"
+      bind:change="onDateChange"
+    />
+  </view>
+
+  <view class="card">
+    <view class="card-title">体质相关情况</view>
+    <view class="row-2">
+      <view class="input-item half">
+        <ui-field label="身高 (cm)" type="number" value="{{form.height}}" placeholder="请输入" bind:change="onFieldChange" data-field="height" />
+      </view>
+      <view class="input-item half">
+        <ui-field label="体重 (kg)" type="number" value="{{form.weight}}" placeholder="请输入" bind:change="onFieldChange" data-field="weight" />
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">舌诊观察</view>
+    <view class="row-2">
+      <view class="input-item half">
+        <ui-picker-field
+          label="舌形"
+          range="{{tongueShapeOptions}}"
+          valueIndex="{{tongue_shape_index}}"
+          displayText="{{form.tongue_shape}}"
+          placeholder="请选择"
+          bind:change="onPickerFieldChange"
+          data-field="tongue_shape"
+          data-range="tongueShapeOptions"
+        />
+      </view>
+      <view class="input-item half">
+        <ui-picker-field
+          label="舌色"
+          range="{{tongueColorOptions}}"
+          valueIndex="{{tongue_color_index}}"
+          displayText="{{form.tongue_color}}"
+          placeholder="请选择"
+          bind:change="onPickerFieldChange"
+          data-field="tongue_color"
+          data-range="tongueColorOptions"
+        />
+      </view>
+    </view>
+    <view class="input-item">
+      <ui-picker-field
+        label="舌苔"
+        range="{{tongueCoatingOptions}}"
+        valueIndex="{{tongue_coating_index}}"
+        displayText="{{form.tongue_coating}}"
+        placeholder="请选择"
+        bind:change="onPickerFieldChange"
+        data-field="tongue_coating"
+        data-range="tongueCoatingOptions"
+      />
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">裸眼视力</view>
+    <view class="row-2">
+      <view class="input-item half">
+        <ui-field label="左眼" value="{{form.vision_l}}" placeholder="如：4.8" bind:change="onFieldChange" data-field="vision_l" />
+      </view>
+      <view class="input-item half">
+        <ui-field label="右眼" value="{{form.vision_r}}" placeholder="如：4.9" bind:change="onFieldChange" data-field="vision_r" />
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">屈光度（右眼）</view>
+    <view class="row-3">
+      <view class="input-item third">
+        <ui-field label="S" value="{{form.refraction_r_s}}" placeholder="如：-0.50" bind:change="onFieldChange" data-field="refraction_r_s" />
+      </view>
+      <view class="input-item third">
+        <ui-field label="C" value="{{form.refraction_r_c}}" placeholder="如：-0.25" bind:change="onFieldChange" data-field="refraction_r_c" />
+      </view>
+      <view class="input-item third">
+        <ui-field label="A" type="number" value="{{form.refraction_r_a}}" placeholder="如：180" bind:change="onFieldChange" data-field="refraction_r_a" />
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">屈光度（左眼）</view>
+    <view class="row-3">
+      <view class="input-item third">
+        <ui-field label="S" value="{{form.refraction_l_s}}" placeholder="如：-0.75" bind:change="onFieldChange" data-field="refraction_l_s" />
+      </view>
+      <view class="input-item third">
+        <ui-field label="C" value="{{form.refraction_l_c}}" placeholder="如：-0.25" bind:change="onFieldChange" data-field="refraction_l_c" />
+      </view>
+      <view class="input-item third">
+        <ui-field label="A" type="number" value="{{form.refraction_l_a}}" placeholder="如：180" bind:change="onFieldChange" data-field="refraction_l_a" />
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">视光诊断</view>
+    <ui-field label="裸眼视力" value="{{form.diagnosis_vision_status}}" placeholder="如：正常/不正常" bind:change="onFieldChange" data-field="diagnosis_vision_status" />
+    <ui-field label="屈光度" value="{{form.diagnosis_refraction_status}}" placeholder="如：正常/不正常" bind:change="onFieldChange" data-field="diagnosis_refraction_status" />
+    <ui-field label="眼位" value="{{form.diagnosis_axis_status}}" placeholder="如：正常" bind:change="onFieldChange" data-field="diagnosis_axis_status" />
+    <ui-field label="角膜曲率" value="{{form.diagnosis_cornea_status}}" placeholder="如：正常" bind:change="onFieldChange" data-field="diagnosis_cornea_status" />
+  </view>
+
+  <view class="card">
+    <view class="card-title">检测建议/建议</view>
+    <view class="input-item">
+      <textarea class="textarea" placeholder="请输入建议/结论" value="{{form.conclusion}}" bindinput="onTextareaInput" data-field="conclusion" />
+    </view>
+  </view>
+
+  <view class="footer">
+    <button class="btn-primary" bindtap="onSave" loading="{{saving}}" disabled="{{saving}}">保存并查看看板</button>
+    <view class="footer-tip">保存后将跳转至数据看板</view>
+  </view>
+</view>

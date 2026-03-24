@@ -1,0 +1,43 @@
+# ===== 大文件与冗余副本 =====
+视力项目.zip
+视力项目/
+*.zip
+*.rar
+*.7z
+
+# ===== 通用 =====
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.local
+
+# ===== Node 后端 =====
+node后端（新增）/node_modules/
+node后端（新增）/logs/
+node后端（新增）/uploads/
+node后端（新增）/.env
+
+# ===== 管理后台 =====
+后台/art-lnb-master/node_modules/
+后台/art-lnb-master/dist/
+后台/art-lnb-master/.env
+后台/art-lnb-master/dist.rar
+后台/art-lnb-master/dist.zip
+后台/art-lnb-master/dist-*.zip
+
+# ===== 小程序端 =====
+小程序端/最终（视力）/miniprogram/node_modules/
+小程序端/最终（视力）/cloudfunctions/**/node_modules/
+
+# ===== IDE / 编辑器 =====
+.cursor/
+.trae/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ===== 系统生成 =====
+.agents/

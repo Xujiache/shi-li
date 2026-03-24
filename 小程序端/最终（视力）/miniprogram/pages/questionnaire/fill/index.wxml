@@ -1,0 +1,174 @@
+<view class="container">
+  <view class="state-card" wx:if="{{loading}}">
+    <view class="state-icon-wrap">
+      <image class="state-icon" src="/images/icons/question-tab-active.svg" mode="aspectFit"></image>
+    </view>
+    <text class="state-title">正在加载问卷</text>
+    <text class="state-sub">系统正在准备当前页题目和已带出的基础信息，请稍候</text>
+  </view>
+
+  <view class="state-card" wx:elif="{{!childInfo._id}}">
+    <view class="state-icon-wrap">
+      <image class="state-icon" src="/images/icons/user.svg" mode="aspectFit"></image>
+    </view>
+    <text class="state-title">请先完善孩子档案</text>
+    <text class="state-sub">问卷填写需要绑定到当前孩子档案，请先补充学校、年级和班级信息</text>
+    <view class="state-btn-row">
+      <button class="primary-btn state-single-btn" bindtap="goToProfile">去完善档案</button>
+    </view>
+  </view>
+
+  <block wx:elif="{{questionnaire}}">
+    <view class="hero">
+      <view class="hero-top">
+        <view class="hero-copy">
+          <text class="hero-kicker">填写问卷</text>
+          <text class="hero-title">{{questionnaire.title}}</text>
+          <text class="hero-desc">{{currentPageSummary}}</text>
+        </view>
+        <view class="hero-icon-wrap">
+          <image class="hero-icon" src="/images/icons/question-hero.svg" mode="aspectFit"></image>
+        </view>
+      </view>
+
+      <view class="tag-row">
+        <text class="tag">{{pageProgressText}}</text>
+        <text class="tag">{{currentPageStatusText}}</text>
+        <text class="tag light">{{entryModeText}}</text>
+      </view>
+
+      <view class="progress-box">
+        <view class="progress-track">
+          <view class="progress-value" style="width: {{progressPercent}}%;"></view>
+        </view>
+        <text class="progress-text">填写进度 {{progressPercent}}%</text>
+      </view>
+    </view>
+
+    <view class="page-empty-card" wx:if="{{currentSections.length === 0}}">
+      <text class="page-empty-title">当前页暂无需要填写的题目</text>
+      <text class="page-empty-sub">题目会根据前面的答案动态显示，你可以继续翻页或先保存草稿。</text>
+    </view>
+
+    <block wx:else>
+      <block wx:for="{{currentSections}}" wx:key="id">
+        <view class="card section-panel">
+          <view class="section-head">
+            <view class="section-index">{{item.displayIndex}}</view>
+            <view class="section-copy">
+              <text class="section-title">{{item.title}}</text>
+              <text class="section-desc">{{item.description || '请根据本页提示逐项填写问卷内容。'}}</text>
+            </view>
+            <text class="section-chip">{{item.questions.length}} 题</text>
+          </view>
+
+          <block wx:for="{{item.questions}}" wx:key="id" wx:for-item="question" wx:for-index="questionIndex">
+            <view class="question-card">
+              <view class="question-head">
+                <view class="question-order">{{questionIndex + 1}}</view>
+                <view class="question-copy">
+                  <text class="question-title">{{question.title}}<text class="required" wx:if="{{question.required}}">*</text></text>
+                  <text class="question-desc" wx:if="{{question.description}}">{{question.description}}</text>
+                </view>
+              </view>
+
+              <view wx:if="{{question.type === 'profile_field' && question.settings.source_mode === 'readonly_profile'}}" class="field-box readonly-box">
+                <text class="readonly-text">{{question.current_value || '未获取到信息'}}</text>
+              </view>
+
+              <view wx:elif="{{question.type === 'profile_field' || question.type === 'text' || question.type === 'number'}}" class="field-box input-box">
+                <input
+                  class="input"
+                  type="{{question.type === 'number' ? 'number' : 'text'}}"
+                  value="{{question.current_value}}"
+                  placeholder="{{question.placeholder_text}}"
+                  bindinput="onInputChange"
+                  data-question-id="{{question.id}}"
+                  data-code="{{question.code}}"
+                />
+              </view>
+
+              <view wx:elif="{{question.type === 'textarea'}}" class="field-box textarea-box">
+                <textarea
+                  class="textarea"
+                  value="{{question.current_value}}"
+                  maxlength="{{question.settings.max_length || 500}}"
+                  placeholder="{{question.placeholder_text}}"
+                  bindinput="onInputChange"
+                  data-question-id="{{question.id}}"
+                  data-code="{{question.code}}"
+                />
+              </view>
+
+              <view wx:elif="{{question.type === 'date'}}" class="field-box input-box">
+                <picker mode="date" value="{{question.current_value}}" bindchange="onDateChange" data-question-id="{{question.id}}" data-code="{{question.code}}">
+                  <view class="picker-display {{question.current_value ? '' : 'placeholder'}}">{{question.current_value || question.placeholder_text}}</view>
+                </picker>
+              </view>
+
+              <view wx:elif="{{question.type === 'single_choice' || question.type === 'select'}}" class="field-box choice-box">
+                <radio-group bindchange="onSingleChoiceChange" data-question-id="{{question.id}}" data-code="{{question.code}}">
+                  <label class="choice-item" wx:for="{{question.options}}" wx:key="value" wx:for-item="option">
+                    <view class="choice-item-inner">
+                      <radio value="{{option.value}}" checked="{{option.checked}}" color="#0077C2" />
+                      <text class="choice-label">{{option.label}}</text>
+                    </view>
+                  </label>
+                </radio-group>
+              </view>
+
+              <view wx:elif="{{question.type === 'multi_choice'}}" class="field-box choice-box">
+                <checkbox-group bindchange="onMultiChoiceChange" data-question-id="{{question.id}}" data-code="{{question.code}}">
+                  <label class="choice-item" wx:for="{{question.options}}" wx:key="value" wx:for-item="option">
+                    <view class="choice-item-inner">
+                      <checkbox value="{{option.value}}" checked="{{option.checked}}" color="#0077C2" />
+                      <text class="choice-label">{{option.label}}</text>
+                    </view>
+                  </label>
+                </checkbox-group>
+              </view>
+
+              <view wx:elif="{{question.type === 'rating'}}" class="field-box rating-box">
+                <view class="rating-tip">
+                  <text>{{question.settings.min_label || '低'}}</text>
+                  <text>{{question.settings.max_label || '高'}}</text>
+                </view>
+                <view class="rating-row">
+                  <block wx:for="{{[1,2,3,4,5]}}" wx:key="*this" wx:for-item="scoreItem">
+                    <view class="rating-pill {{question.selected_rating === scoreItem ? 'active' : ''}}" bindtap="onRatingTap" data-question-id="{{question.id}}" data-code="{{question.code}}" data-value="{{scoreItem}}">
+                      <text>{{scoreItem}}</text>
+                    </view>
+                  </block>
+                </view>
+              </view>
+
+              <view wx:else class="field-box unsupported-box">
+                <text class="unsupported-text">当前题型暂不支持在此页面展示，请联系管理员调整题型配置。</text>
+              </view>
+            </view>
+          </block>
+        </view>
+      </block>
+    </block>
+
+    <view class="action-card floating-action-card">
+      <text class="action-hint">支持分页填写和保存草稿，提交成功后将自动跳转到填写记录页。</text>
+      <view class="pager-row">
+        <button class="ghost-btn" bindtap="goPrevPage" disabled="{{currentPageNo <= 1}}">上一页</button>
+        <button class="ghost-btn" bindtap="goNextPage" disabled="{{currentPageNo >= totalPages}}">下一页</button>
+      </view>
+      <view class="action-row">
+        <button class="ghost-btn" bindtap="saveDraft" loading="{{savingDraft}}">保存草稿</button>
+        <button class="primary-btn" bindtap="submit" loading="{{submitting}}">提交问卷</button>
+      </view>
+    </view>
+  </block>
+
+  <view class="state-card" wx:else>
+    <view class="state-icon-wrap">
+      <image class="state-icon" src="/images/icons/question-tab-active.svg" mode="aspectFit"></image>
+    </view>
+    <text class="state-title">未找到问卷内容</text>
+    <text class="state-sub">该问卷可能已下线，或当前孩子暂不在问卷的可填写范围内</text>
+  </view>
+</view>

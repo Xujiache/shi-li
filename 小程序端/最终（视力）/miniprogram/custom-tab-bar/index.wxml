@@ -1,0 +1,12 @@
+<view class="tabbar-wrap" style="padding-bottom: {{safeBottom}}px;">
+  <view class="tabbar">
+    <block wx:for="{{list}}" wx:key="pagePath">
+      <view class="item {{selected === index ? 'active' : ''}}" data-path="{{item.pagePath}}" data-index="{{index}}" bindtap="onSwitch">
+        <view class="item-glow"></view>
+        <image class="icon {{selected === index ? 'active' : ''}}" src="{{selected === index ? item.selectedIconPath : item.iconPath}}" mode="aspectFit" />
+        <text class="text {{selected === index ? 'active' : ''}}">{{item.text}}</text>
+      </view>
+    </block>
+  </view>
+</view>
+

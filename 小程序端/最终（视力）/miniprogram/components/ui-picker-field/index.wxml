@@ -1,0 +1,18 @@
+<view class="field {{disabled ? 'is-disabled' : ''}} {{focused ? 'is-focus' : ''}} {{error ? 'is-error' : ''}}">
+  <view class="label-row" wx:if="{{label}}">
+    <text class="label">{{label}}</text>
+    <text class="required" wx:if="{{required}}">*</text>
+    <text class="meta" wx:if="{{meta}}">{{meta}}</text>
+  </view>
+
+  <picker mode="{{mode}}" value="{{mode === 'date' ? value : valueIndex}}" range="{{range}}" range-key="{{rangeKey}}" bindchange="onChange" disabled="{{disabled}}">
+    <view class="control" bindtap="onTap">
+      <text class="text {{displayText ? '' : 'placeholder'}}">{{displayText || placeholder}}</text>
+      <text class="arrow">></text>
+    </view>
+  </picker>
+
+  <view class="help" wx:if="{{helper || errorText}}">
+    <text class="help-text {{errorText ? 'err' : ''}}">{{errorText || helper}}</text>
+  </view>
+</view>

@@ -1,0 +1,29 @@
+<view class="container">
+  <view class="header">
+    <text class="title">请选择预约项目</text>
+    <text class="sub">项目由后台配置，可新增/删除</text>
+  </view>
+
+  <view class="list">
+    <block wx:for="{{items}}" wx:key="_id">
+      <view class="item-card" bindtap="goToBook" data-id="{{item._id}}" data-name="{{item.name}}">
+        <view class="left">
+          <text class="name">{{item.name}}</text>
+          <text class="desc">点击选择日期与时段</text>
+        </view>
+        <view class="right">
+          <view class="visual" aria-hidden="true">
+            <image class="visual-img" src="{{item.image_url || '/images/default-goods-image.png'}}" mode="aspectFill" />
+            <view class="visual-fade"></view>
+            <view class="visual-tint"></view>
+          </view>
+          <text class="arrow">›</text>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <view class="empty" wx:if="{{items.length===0}}">
+    <text class="empty-text">暂无可预约项目</text>
+  </view>
+</view>
