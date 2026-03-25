@@ -14,6 +14,7 @@ Page({
     },
     // 指定查看的记录 ID（从数据页点击某条记录进入时传入）
     targetRecordId: '',
+    /** 骨架屏加载状态：无缓存时显示骨架屏，有缓存秒开 */
     isLoading: true
   },
 
@@ -24,7 +25,6 @@ Page({
     }
     // 先从缓存加载
     this.loadFromCache()
-    this.initData()
   },
 
   onShow() {
@@ -36,7 +36,10 @@ Page({
     this.initData().finally(() => wx.stopPullDownRefresh())
   },
 
-  /** 先从缓存加载数据秒开 */
+  /**
+   * 先从缓存加载数据秒开。
+   * 命中缓存时直接关闭骨架屏，否则保持 isLoading=true。
+   */
   loadFromCache() {
     const child = app.globalData.currentChild
     const childId = (child && child._id) || wx.getStorageSync('current_child_id') || ''
@@ -47,9 +50,15 @@ Page({
     const cachedRecords = cache.getCache('records_' + childId)
     if (Array.isArray(cachedRecords) && cachedRecords.length > 0) {
       this.applyRecords(cachedRecords)
+      this.setData({ isLoading: false })
     }
   },
 
+  /**
+   * 初始化页面数据：获取档案信息和检查记录。
+   * 完成后关闭骨架屏。
+   * @returns {Promise<void>}
+   */
   async initData() {
     if (app.globalData.currentChild) {
       this.setData({ childInfo: app.globalData.currentChild })
@@ -58,7 +67,11 @@ Page({
     }
 
     await this.fetchRecords()
-    this.setData({ isLoading: false })
+
+    // 数据加载完毕，关闭骨架屏
+    if (this.data.isLoading) {
+      this.setData({ isLoading: false })
+    }
   },
 
   async fetchChildInfo() {

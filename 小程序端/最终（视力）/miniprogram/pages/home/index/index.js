@@ -6,6 +6,7 @@ Page({
   data: {
     banners: [],
     childInfo: {},
+    /** 骨架屏加载状态：无缓存时显示骨架屏，有缓存秒开 */
     isLoading: true
   },
 
@@ -32,11 +33,14 @@ Page({
     })
   },
 
-  /** 先从缓存读取数据，立即渲染 */
+  /**
+   * 先从缓存读取数据，立即渲染。
+   * 命中缓存时跳过骨架屏，否则保持 isLoading=true 等待接口返回。
+   */
   loadFromCache() {
     const cachedChild = cache.getCache('current_child')
     if (cachedChild && cachedChild._id) {
-      this.setData({ childInfo: cachedChild })
+      this.setData({ childInfo: cachedChild, isLoading: false })
       if (!app.globalData.currentChild) {
         app.globalData.currentChild = cachedChild
       }
@@ -44,6 +48,11 @@ Page({
     // 轮播图不从缓存加载（临时文件路径重启后失效），由 fetchBanners 实时获取
   },
 
+  /**
+   * 初始化页面数据：获取档案信息与轮播图。
+   * 完成后关闭骨架屏。
+   * @returns {Promise<void>}
+   */
   async initData() {
     // 1. Get Child Info from Global Data or Cloud
     if (app.globalData.currentChild) {
@@ -56,8 +65,11 @@ Page({
     
     // 2. Fetch Banners
     await this.fetchBanners()
-    
-    this.setData({ isLoading: false })
+
+    // 3. 数据加载完毕，关闭骨架屏
+    if (this.data.isLoading) {
+      this.setData({ isLoading: false })
+    }
   },
 
   async fetchChildInfo() {

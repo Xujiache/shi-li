@@ -49,27 +49,3 @@ button:active {
   transform: translateY(2rpx) scale(0.985);
   opacity: 0.96;
 }
-
-/* 骨架屏基础样式 */
-.sk-pulse {
-  background: #f2f3f5 !important;
-  color: transparent !important;
-  pointer-events: none;
-  overflow: hidden;
-  position: relative;
-  border-radius: 8rpx;
-}
-.sk-pulse::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-  transform: skewX(-20deg);
-  animation: sk-shimmer 1.5s infinite;
-}
-@keyframes sk-shimmer {
-  100% { left: 200%; }
-}

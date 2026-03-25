@@ -267,3 +267,100 @@
   color: var(--text-100);
   font-weight: 600;
 }
+
+/* ========== 骨架屏 ========== */
+@keyframes skPulse {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.sk-pulse {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 37%, #f0f0f0 63%);
+  background-size: 400% 100%;
+  animation: skPulse 1.6s ease infinite;
+}
+
+.sk-wrap {
+  width: 100%;
+}
+
+/* 轮播图骨架 */
+.sk-banner {
+  width: 100%;
+  height: 320rpx;
+  border-radius: 28rpx;
+  margin-bottom: 32rpx;
+}
+
+/* 档案卡骨架 */
+.sk-card {
+  width: 100%;
+  background: #fff;
+  border-radius: 28rpx;
+  overflow: hidden;
+  box-shadow: 0 16rpx 40rpx rgba(0, 119, 194, 0.08);
+  margin-bottom: 32rpx;
+}
+
+.sk-card-row {
+  display: flex;
+  align-items: center;
+  padding: 32rpx;
+}
+
+.sk-avatar {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  margin-right: 24rpx;
+  flex-shrink: 0;
+}
+
+.sk-info {
+  flex: 1;
+}
+
+.sk-line {
+  height: 28rpx;
+  border-radius: 14rpx;
+  margin-bottom: 16rpx;
+}
+
+.sk-line:last-child {
+  margin-bottom: 0;
+}
+
+.sk-w40 { width: 40%; }
+.sk-w50 { width: 50%; }
+.sk-w60 { width: 60%; }
+.sk-w70 { width: 70%; }
+
+.sk-btns {
+  height: 96rpx;
+  border-top: 1rpx solid rgba(0, 0, 0, 0.04);
+}
+
+/* 金刚区骨架 */
+.sk-grid-card {
+  width: 100%;
+  background: #fff;
+  border-radius: 28rpx;
+  padding: 24rpx 12rpx;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  box-shadow: 0 16rpx 40rpx rgba(0, 119, 194, 0.05);
+  box-sizing: border-box;
+}
+
+.sk-grid-item {
+  width: 33.33%;
+  height: 170rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 24rpx;
+  box-sizing: border-box;
+  padding: 20rpx;
+}
