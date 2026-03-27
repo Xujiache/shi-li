@@ -12,6 +12,17 @@ export const visionAdminRoutes: AppRouteRecord = {
   },
   children: [
     {
+      path: 'admins',
+      name: 'VisionAdminAdmins',
+      component: '/vision-admin/admins/index',
+      meta: {
+        title: '管理员管理',
+        icon: 'ri:admin-line',
+        keepAlive: true,
+        roles: ['R_SUPER', 'R_ADMIN']
+      }
+    },
+    {
       path: 'users',
       name: 'VisionAdminUsers',
       component: '/vision-admin/users/index',
@@ -128,6 +139,17 @@ export const visionAdminRoutes: AppRouteRecord = {
       meta: {
         title: '问卷填写数据',
         icon: 'ri:file-list-2-line',
+        keepAlive: true,
+        roles: ['R_SUPER', 'R_ADMIN']
+      }
+    },
+    {
+      path: 'operation-logs',
+      name: 'VisionAdminOperationLogs',
+      component: '/vision-admin/operation-logs/index',
+      meta: {
+        title: '操作日志',
+        icon: 'ri:file-text-line',
         keepAlive: true,
         roles: ['R_SUPER', 'R_ADMIN']
       }

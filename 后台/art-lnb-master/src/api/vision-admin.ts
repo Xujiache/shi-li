@@ -618,3 +618,53 @@ export function questionnaireSubmissionsExport(params: Record<string, unknown> =
     params
   })
 }
+
+// ——— 管理员管理（独立 admins 表）———
+export function adminsList(params: Record<string, unknown> = {}) {
+  return api.get({
+    url: '/api/v1/admin/admins',
+    params: paginationParams(params)
+  })
+}
+
+export function adminsDetail(params: { admin_id: string }) {
+  return api.get<{ admin: unknown }>({
+    url: `/api/v1/admin/admins/${params.admin_id}`
+  })
+}
+
+export function adminsCreate(params: {
+  phone: string
+  password: string
+  display_name?: string
+  role?: string
+}) {
+  return api.post<{ admin: unknown }>({
+    url: '/api/v1/admin/admins',
+    params
+  })
+}
+
+export function adminsUpdate(params: {
+  admin_id: string
+  patch: { phone?: string; display_name?: string; password?: string; role?: string; active?: boolean }
+}) {
+  return api.put({
+    url: `/api/v1/admin/admins/${params.admin_id}`,
+    params: params.patch
+  })
+}
+
+export function adminsDelete(params: { admin_id: string }) {
+  return api.del({
+    url: `/api/v1/admin/admins/${params.admin_id}`
+  })
+}
+
+// ——— 操作日志 ———
+export function operationLogsList(params: Record<string, unknown> = {}) {
+  return api.get({
+    url: '/api/v1/admin/operation-logs',
+    params: paginationParams(params)
+  })
+}

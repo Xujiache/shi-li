@@ -1,51 +1,32 @@
 const express = require('express')
 const router = express.Router()
-const { authMiddleware, USER_TYPES } = require('../../utils/jwt')
+const { authMiddleware, USER_TYPES, generateToken } = require('../../utils/jwt')
 const { success } = require('../../utils/response')
 const { asyncRoute } = require('../../utils/asyncRoute')
-const { loginByPhone } = require('../../services/authService')
-const { getUserProfile } = require('../../services/userService')
+const { adminLogin, safeAdmin, buildAdminTokenPayload, findAdminById } = require('../../services/adminService')
 
 /**
- * 处理管理员登录。
- * @param {import('express').Request} req Express 请求对象。
- * @param {import('express').Response} res Express 响应对象。
- * @returns {Promise<void>}
+ * 管理员登录（使用独立 admins 表）。
  */
 async function loginHandler(req, res) {
-  const result = await loginByPhone(
-    {
-      phone: req.body.phone,
-      password: req.body.password
-    },
-    USER_TYPES.ADMIN
+  const admin = await adminLogin(
+    String(req.body.phone || '').trim(),
+    String(req.body.password || '')
   )
-  success(
-    res,
-    {
-      token: result.token,
-      admin: result.user
-    },
-    '登录成功'
-  )
+  const token = generateToken(buildAdminTokenPayload(admin), USER_TYPES.ADMIN)
+  success(res, { token, admin: safeAdmin(admin) }, '登录成功')
 }
 
 /**
  * 获取当前管理员信息。
- * @param {import('express').Request} req Express 请求对象。
- * @param {import('express').Response} res Express 响应对象。
- * @returns {Promise<void>}
  */
 async function meHandler(req, res) {
-  const admin = await getUserProfile(req.user.id)
-  success(res, { admin })
+  const admin = await findAdminById(req.user.id)
+  success(res, { admin: safeAdmin(admin) })
 }
 
 /**
- * 处理管理员退出登录。
- * @param {import('express').Request} req Express 请求对象。
- * @param {import('express').Response} res Express 响应对象。
- * @returns {void}
+ * 退出登录。
  */
 function logoutHandler(req, res) {
   success(res, null, '退出登录成功')

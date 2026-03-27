@@ -12,6 +12,13 @@ const { logAdminAction } = require('../../middlewares/adminLog')
 const { query, queryOne } = require('../../utils/db')
 const { normalizePagination } = require('../../utils/helpers')
 const {
+  listAdmins,
+  getAdminDetail,
+  createAdmin,
+  updateAdmin,
+  deleteAdmin: deleteAdminService
+} = require('../../services/adminService')
+const {
   listUsers,
   getUserDetail,
   createUserByAdmin,
@@ -602,6 +609,34 @@ router.get('/operation-logs', asyncRoute(operationLogsHandler))
 
 // ===== 仪表盘（所有管理员可查看） =====
 router.get('/dashboard/stats', asyncRoute(dashboardStatsHandler))
+
+// ===== 管理员管理（独立 admins 表）=====
+router.get('/admins', asyncRoute(async (req, res) => {
+  const result = await listAdmins(req.query)
+  success(res, result)
+}))
+router.get('/admins/:id', asyncRoute(async (req, res) => {
+  const admin = await getAdminDetail(req.params.id)
+  success(res, { admin })
+}))
+router.post('/admins', isSuperAdmin, logAdminAction('create', 'admin'), asyncRoute(async (req, res) => {
+  const admin = await createAdmin(req.body)
+  success(res, { admin }, '创建成功')
+}))
+router.put('/admins/:id', isSuperAdmin, logAdminAction('update', 'admin'), asyncRoute(async (req, res) => {
+  if (Number(req.user.id) === Number(req.params.id) && req.body.role && req.body.role !== 'super_admin') {
+    throw createAppError('不能降低自己的权限', 400)
+  }
+  const admin = await updateAdmin(req.params.id, req.body)
+  success(res, { admin }, '更新成功')
+}))
+router.delete('/admins/:id', isSuperAdmin, logAdminAction('delete', 'admin'), asyncRoute(async (req, res) => {
+  if (Number(req.user.id) === Number(req.params.id)) {
+    throw createAppError('不能删除自己的账号', 400)
+  }
+  await deleteAdminService(req.params.id)
+  success(res, null, '删除成功')
+}))
 
 // ===== 用户管理 =====
 router.get('/users', asyncRoute(usersListHandler))
