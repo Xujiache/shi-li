@@ -7,6 +7,10 @@ const { success } = require('../../utils/response')
 const { asyncRoute } = require('../../utils/asyncRoute')
 const { hashPassword } = require('../../utils/bcrypt')
 const { createAppError } = require('../../utils/appError')
+const { isSuperAdmin } = require('../middlewares/permission')
+const { logAdminAction } = require('../../middlewares/adminLog')
+const { query, queryOne } = require('../../utils/db')
+const { normalizePagination } = require('../../utils/helpers')
 const {
   listUsers,
   getUserDetail,
@@ -551,61 +555,115 @@ async function dashboardStatsHandler(req, res) {
   success(res, stats)
 }
 
+/**
+ * 获取操作日志列表。
+ */
+async function operationLogsHandler(req, res) {
+  const { page, pageSize, offset } = normalizePagination(req.query.page, req.query.page_size)
+  const conditions = []
+  const values = []
+
+  if (req.query.action) {
+    conditions.push('action = ?')
+    values.push(req.query.action)
+  }
+  if (req.query.resource) {
+    conditions.push('resource = ?')
+    values.push(req.query.resource)
+  }
+  if (req.query.admin_id) {
+    conditions.push('admin_id = ?')
+    values.push(req.query.admin_id)
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+  const totalRow = await queryOne(`SELECT COUNT(*) AS total FROM admin_operation_logs ${whereClause}`, values)
+  const rows = await query(
+    `SELECT * FROM admin_operation_logs ${whereClause} ORDER BY created_at DESC LIMIT ${pageSize} OFFSET ${offset}`,
+    values
+  )
+
+  success(res, {
+    list: rows.map(r => ({
+      ...r,
+      detail: r.detail ? (() => { try { return JSON.parse(r.detail) } catch { return r.detail } })() : null
+    })),
+    total: totalRow ? Number(totalRow.total) : 0,
+    page,
+    page_size: pageSize
+  })
+}
+
 router.use('/auth', authRoutes)
 router.use(authMiddleware(USER_TYPES.ADMIN))
 
+// ===== 操作日志（所有管理员可查看） =====
+router.get('/operation-logs', asyncRoute(operationLogsHandler))
+
+// ===== 仪表盘（所有管理员可查看） =====
+router.get('/dashboard/stats', asyncRoute(dashboardStatsHandler))
+
+// ===== 用户管理 =====
 router.get('/users', asyncRoute(usersListHandler))
 router.get('/users/:id', asyncRoute(userDetailHandler))
-router.post('/users', asyncRoute(createUserHandler))
-router.put('/users/:id', asyncRoute(updateUserHandler))
-router.delete('/users/:id', asyncRoute(deleteUserHandler))
-router.put('/users/:id/admin', asyncRoute(setAdminHandler))
+router.post('/users', isSuperAdmin, logAdminAction('create', 'user'), asyncRoute(createUserHandler))
+router.put('/users/:id', isSuperAdmin, logAdminAction('update', 'user'), asyncRoute(updateUserHandler))
+router.delete('/users/:id', isSuperAdmin, logAdminAction('delete', 'user'), asyncRoute(deleteUserHandler))
+router.put('/users/:id/admin', isSuperAdmin, logAdminAction('update', 'admin_role'), asyncRoute(setAdminHandler))
 
+// ===== 孩子档案 =====
 router.get('/children', asyncRoute(childrenListHandler))
 router.get('/children/:id', asyncRoute(childDetailHandler))
-router.post('/children', asyncRoute(createChildHandler))
-router.put('/children/:id', asyncRoute(updateChildHandler))
-router.delete('/children/:id', asyncRoute(deleteChildHandler))
+router.post('/children', isSuperAdmin, logAdminAction('create', 'child'), asyncRoute(createChildHandler))
+router.put('/children/:id', isSuperAdmin, logAdminAction('update', 'child'), asyncRoute(updateChildHandler))
+router.delete('/children/:id', isSuperAdmin, logAdminAction('delete', 'child'), asyncRoute(deleteChildHandler))
 
+// ===== 学校班级 =====
 router.get('/school-classes', asyncRoute(schoolClassesListHandler))
 router.get('/school-classes/:id', asyncRoute(schoolClassDetailHandler))
-router.post('/school-classes', asyncRoute(createSchoolClassHandler))
-router.put('/school-classes/:id', asyncRoute(updateSchoolClassHandler))
-router.delete('/school-classes/:id', asyncRoute(deleteSchoolClassHandler))
+router.post('/school-classes', isSuperAdmin, logAdminAction('create', 'school_class'), asyncRoute(createSchoolClassHandler))
+router.put('/school-classes/:id', isSuperAdmin, logAdminAction('update', 'school_class'), asyncRoute(updateSchoolClassHandler))
+router.delete('/school-classes/:id', isSuperAdmin, logAdminAction('delete', 'school_class'), asyncRoute(deleteSchoolClassHandler))
 
+// ===== 轮播图 =====
 router.get('/banners', asyncRoute(bannersListHandler))
 router.get('/banners/:id', asyncRoute(bannerDetailHandler))
-router.post('/banners', asyncRoute(createBannerHandler))
-router.put('/banners/:id', asyncRoute(updateBannerHandler))
-router.delete('/banners/:id', asyncRoute(deleteBannerHandler))
+router.post('/banners', isSuperAdmin, logAdminAction('create', 'banner'), asyncRoute(createBannerHandler))
+router.put('/banners/:id', isSuperAdmin, logAdminAction('update', 'banner'), asyncRoute(updateBannerHandler))
+router.delete('/banners/:id', isSuperAdmin, logAdminAction('delete', 'banner'), asyncRoute(deleteBannerHandler))
 
+// ===== 预约项目 =====
 router.get('/appointment-items', asyncRoute(appointmentItemsListHandler))
 router.get('/appointment-items/:id', asyncRoute(appointmentItemDetailHandler))
-router.post('/appointment-items', asyncRoute(createAppointmentItemHandler))
-router.put('/appointment-items/:id', asyncRoute(updateAppointmentItemHandler))
-router.delete('/appointment-items/:id', asyncRoute(deleteAppointmentItemHandler))
+router.post('/appointment-items', isSuperAdmin, logAdminAction('create', 'appointment_item'), asyncRoute(createAppointmentItemHandler))
+router.put('/appointment-items/:id', isSuperAdmin, logAdminAction('update', 'appointment_item'), asyncRoute(updateAppointmentItemHandler))
+router.delete('/appointment-items/:id', isSuperAdmin, logAdminAction('delete', 'appointment_item'), asyncRoute(deleteAppointmentItemHandler))
 
+// ===== 预约排班 =====
 router.get('/appointment-schedules', asyncRoute(appointmentSchedulesListHandler))
 router.get('/appointment-schedules/:id', asyncRoute(appointmentScheduleDetailHandler))
-router.post('/appointment-schedules', asyncRoute(createAppointmentScheduleHandler))
-router.put('/appointment-schedules/:id', asyncRoute(updateAppointmentScheduleHandler))
-router.delete('/appointment-schedules/:id', asyncRoute(deleteAppointmentScheduleHandler))
+router.post('/appointment-schedules', isSuperAdmin, logAdminAction('create', 'appointment_schedule'), asyncRoute(createAppointmentScheduleHandler))
+router.put('/appointment-schedules/:id', isSuperAdmin, logAdminAction('update', 'appointment_schedule'), asyncRoute(updateAppointmentScheduleHandler))
+router.delete('/appointment-schedules/:id', isSuperAdmin, logAdminAction('delete', 'appointment_schedule'), asyncRoute(deleteAppointmentScheduleHandler))
 
+// ===== 预约记录 =====
 router.get('/appointment-records', asyncRoute(appointmentRecordsListHandler))
 router.get('/appointment-records/:id', asyncRoute(appointmentRecordDetailHandler))
-router.put('/appointment-records/:id/status', asyncRoute(appointmentRecordStatusHandler))
-router.delete('/appointment-records/:id', asyncRoute(deleteAppointmentRecordHandler))
+router.put('/appointment-records/:id/status', isSuperAdmin, logAdminAction('update', 'appointment_record'), asyncRoute(appointmentRecordStatusHandler))
+router.delete('/appointment-records/:id', isSuperAdmin, logAdminAction('delete', 'appointment_record'), asyncRoute(deleteAppointmentRecordHandler))
 
+// ===== 检测记录 =====
 router.get('/checkup-records', asyncRoute(checkupRecordsListHandler))
 router.get('/checkup-records/:id', asyncRoute(checkupRecordDetailHandler))
-router.post('/checkup-records', asyncRoute(createCheckupRecordHandler))
-router.put('/checkup-records/:id', asyncRoute(updateCheckupRecordHandler))
-router.delete('/checkup-records/:id', asyncRoute(deleteCheckupRecordHandler))
+router.post('/checkup-records', isSuperAdmin, logAdminAction('create', 'checkup_record'), asyncRoute(createCheckupRecordHandler))
+router.put('/checkup-records/:id', isSuperAdmin, logAdminAction('update', 'checkup_record'), asyncRoute(updateCheckupRecordHandler))
+router.delete('/checkup-records/:id', isSuperAdmin, logAdminAction('delete', 'checkup_record'), asyncRoute(deleteCheckupRecordHandler))
 
+// ===== 系统配置 =====
 router.get('/system-config/terms', asyncRoute(termsGetHandler))
-router.put('/system-config/terms', asyncRoute(termsUpdateHandler))
+router.put('/system-config/terms', isSuperAdmin, logAdminAction('update', 'system_config'), asyncRoute(termsUpdateHandler))
 
-router.get('/dashboard/stats', asyncRoute(dashboardStatsHandler))
+// ===== 问卷 =====
 router.use('/', questionnaireRoutes)
 
 module.exports = router

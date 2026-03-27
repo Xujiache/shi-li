@@ -19,6 +19,7 @@ function normalizeUser(row) {
     avatar_file_id: row.avatar_url || '',
     user_no: row.user_no || '',
     is_admin: Boolean(row.is_admin),
+    role: row.role || 'user',
     active: row.active !== 0,
     deleted: Boolean(row.deleted),
     wechat_openid: row.wechat_openid || '',
@@ -205,6 +206,7 @@ function buildTokenPayload(user) {
     id: Number(user.id),
     phone: user.phone || '',
     is_admin: Boolean(user.is_admin),
+    role: user.role || 'user',
     user_no: user.user_no || '',
     display_name: user.display_name || ''
   }
@@ -227,7 +229,8 @@ async function getUserProfile(userId) {
     avatar_url: normalized.avatar_url,
     avatar_file_id: normalized.avatar_file_id,
     phone: normalized.phone,
-    is_admin: normalized.is_admin
+    is_admin: normalized.is_admin,
+    role: normalized.role
   }
 }
 

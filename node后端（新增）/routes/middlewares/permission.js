@@ -133,5 +133,23 @@ const isResourceOwner = (getOwnerId) => {
 module.exports = {
   checkPermission,
   isAdmin,
-  isResourceOwner
+  isResourceOwner,
+  /**
+   * 检查用户是否为超级管理员（role === 'super_admin'）。
+   * 用于保护写操作和导出接口。
+   */
+  isSuperAdmin: (req, res, next) => {
+    try {
+      const user = req.user;
+      if (!user) {
+        return error(res, '无权限访问', StatusCodes.FORBIDDEN);
+      }
+      if (user.role === 'super_admin') {
+        return next();
+      }
+      return error(res, '需要超级管理员权限', StatusCodes.FORBIDDEN);
+    } catch (err) {
+      return error(res, '权限验证失败', StatusCodes.INTERNAL_SERVER_ERROR);
+    }
+  }
 }; 
