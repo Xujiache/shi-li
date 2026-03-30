@@ -1,8 +1,7 @@
 {
   "pages": [
-    "pages/welcome/index",
-    "pages/auth/login/index",
     "pages/home/index/index",
+    "pages/auth/login/index",
     "pages/appointment/list/index",
     "pages/appointment/book/index",
     "pages/dashboard/index/index",

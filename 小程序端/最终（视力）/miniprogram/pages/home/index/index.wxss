@@ -120,6 +120,98 @@
   background: #f8fbff;
 }
 
+/* ========== 游客卡片 ========== */
+.guest-card {
+  width: 100%;
+  background: rgba(255, 255, 255, 1);
+  border-radius: 28rpx;
+  overflow: hidden;
+  box-shadow: 0 16rpx 40rpx rgba(0, 119, 194, 0.08);
+  box-sizing: border-box;
+  margin-bottom: 32rpx;
+}
+
+.guest-card-top {
+  display: flex;
+  align-items: center;
+  padding: 32rpx 32rpx 24rpx;
+}
+
+.guest-avatar-wrap {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #90caf9 0%, #42a5f5 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 24rpx;
+  flex-shrink: 0;
+  box-shadow: 0 8rpx 20rpx rgba(0, 119, 194, 0.15);
+}
+
+.guest-avatar-text {
+  font-size: 44rpx;
+}
+
+.guest-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.guest-name {
+  font-size: 36rpx;
+  font-weight: 900;
+  color: var(--text-100);
+  line-height: 1.2;
+}
+
+.guest-meta {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: var(--text-200);
+  line-height: 1.6;
+}
+
+.guest-card-btns {
+  padding: 0 32rpx 32rpx;
+}
+
+.btn-login-card {
+  width: 100% !important;
+  height: 88rpx;
+  line-height: 88rpx;
+  background: var(--primary-100);
+  color: white;
+  border-radius: 999rpx;
+  padding: 0;
+  font-size: 32rpx;
+  font-weight: 800;
+  text-align: center;
+  box-shadow: 0 8rpx 20rpx rgba(0, 119, 194, 0.2);
+  transition: all 0.2s ease;
+  display: block;
+  box-sizing: border-box;
+  border: none;
+}
+
+.btn-login-card:active {
+  transform: scale(0.96);
+  box-shadow: 0 4rpx 10rpx rgba(0, 119, 194, 0.15);
+}
+
+/* 底部登录提示 */
+.guest-tip {
+  text-align: center;
+  padding: 24rpx 0 16rpx;
+}
+
+.guest-tip-text {
+  font-size: 24rpx;
+  color: var(--text-200);
+  opacity: 0.7;
+}
+
 .hero-card {
   width: 100%;
   background: rgba(255, 255, 255, 1);

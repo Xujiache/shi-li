@@ -2,7 +2,7 @@ const app = getApp()
 const cache = require('../../../utils/cache')
 const { getUserProfile, updateUserProfile, getChildren, updateChild, getTerms } = require('../../../utils/api')
 const { uploadImage } = require('../../../utils/upload')
-const { clearAuthToken } = require('../../../utils/request')
+const { clearAuthToken, getAuthToken } = require('../../../utils/request')
 
 Page({
   data: {
@@ -35,6 +35,13 @@ Page({
   },
 
   onShow() {
+    // 未登录时跳转登录页
+    const token = getAuthToken()
+    const userId = wx.getStorageSync('current_user_id')
+    if (!token || !userId) {
+      wx.navigateTo({ url: '/pages/auth/login/index' })
+      return
+    }
     this.syncCurrentUserIdFromGlobal()
     this.initData()
     this.fetchUserProfile()
@@ -407,7 +414,7 @@ Page({
                   // ignore
                 }
                 wx.reLaunch({
-                    url: '/pages/auth/login/index'
+                    url: '/pages/home/index/index'
                 })
             }
         }

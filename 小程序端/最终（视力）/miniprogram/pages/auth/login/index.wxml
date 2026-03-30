@@ -5,6 +5,7 @@
     <view class="header">
       <text class="title">您好，</text>
       <text class="subtitle">欢迎使用儿童视力管理体系</text>
+      <text class="header-notice">本系统仅限已注册的学校/机构合作家长登录使用</text>
     </view>
 
     <view class="login-box {{isRegister ? 'register-mode' : ''}}">

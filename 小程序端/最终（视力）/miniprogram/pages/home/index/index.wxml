@@ -44,7 +44,26 @@
         <view class="banner-empty" wx:else>暂无活动</view>
       </view>
 
-      <view class="hero-card">
+      <!-- ===== 未登录 - 游客提示卡片 ===== -->
+      <view class="guest-card" wx:if="{{!isLoggedIn}}">
+        <view class="guest-card-top">
+          <view class="guest-avatar-wrap">
+            <text class="guest-avatar-text">👋</text>
+          </view>
+          <view class="guest-info">
+            <view class="guest-name">您好，游客</view>
+            <view class="guest-meta">本系统仅限已注册用户（学校/机构合作家长）登录使用</view>
+          </view>
+        </view>
+        <view class="guest-card-btns">
+          <button class="btn-login-card" bindtap="goToLogin">
+            <text>登录 / 注册</text>
+          </button>
+        </view>
+      </view>
+
+      <!-- ===== 已登录 - 孩子档案卡片 ===== -->
+      <view class="hero-card" wx:if="{{isLoggedIn}}">
         <view class="hero-card-top">
           <view class="hero-avatar-wrap">
             <view class="hero-avatar-text">{{childInfo.name ? childInfo.name[0] : '?'}}</view>
@@ -91,6 +110,11 @@
           <image class="action-icon" src="/images/icons/profile.svg" mode="aspectFit"></image>
           <text class="action-text">档案管理</text>
         </view>
+      </view>
+
+      <!-- ===== 未登录 - 底部提示 ===== -->
+      <view class="guest-tip" wx:if="{{!isLoggedIn}}">
+        <text class="guest-tip-text">使用以上功能需先登录账号</text>
       </view>
     </view>
   </view>

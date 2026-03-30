@@ -1,5 +1,6 @@
 const app = getApp()
 const { getChildren, getQuestionnaires } = require('../../../utils/api')
+const { getAuthToken } = require('../../../utils/request')
 
 Page({
   data: {
@@ -23,6 +24,13 @@ Page({
   onShow() {
     const tabBar = this.getTabBar && this.getTabBar()
     if (tabBar && tabBar.updateSelected) tabBar.updateSelected()
+    // 未登录时跳转登录页
+    const token = getAuthToken()
+    const userId = wx.getStorageSync('current_user_id')
+    if (!token || !userId) {
+      wx.navigateTo({ url: '/pages/auth/login/index' })
+      return
+    }
     this.initData()
   },
 

@@ -1,17 +1,19 @@
 const app = getApp()
 const cache = require('../../../utils/cache')
 const { getChildren, getBanners } = require('../../../utils/api')
+const { getAuthToken } = require('../../../utils/request')
 
 Page({
   data: {
     banners: [],
     childInfo: {},
-    /** 骨架屏加载状态：无缓存时显示骨架屏，有缓存秒开 */
-    isLoading: true
+    /** 骨架屏加载状态 */
+    isLoading: true,
+    /** 是否已登录 */
+    isLoggedIn: false
   },
 
   onLoad() {
-    // 清除旧的轮播图缓存（临时文件路径重启后失效，cloud:// 地址也无法直接渲染）
     cache.removeCache('banners')
     this.loadFromCache()
     this.initData()
@@ -20,23 +22,47 @@ Page({
   onShow() {
     const tabBar = this.getTabBar && this.getTabBar()
     if (tabBar && tabBar.updateSelected) tabBar.updateSelected()
-    // 返回首页时刷新展示（后台更换轮播/编辑档案后可立即看到）
-    if (app.globalData.currentChild) {
-      this.setData({ childInfo: app.globalData.currentChild })
+
+    // 每次显示时重新检查登录状态（登录后返回首页时刷新）
+    const loggedIn = this.checkLoginStatus()
+    this.setData({ isLoggedIn: loggedIn })
+
+    if (loggedIn) {
+      if (app.globalData.currentChild) {
+        this.setData({ childInfo: app.globalData.currentChild })
+      } else {
+        this.fetchChildInfo()
+      }
     }
     this.fetchBanners()
   },
 
   onPullDownRefresh() {
     this.initData().then(() => {
-        wx.stopPullDownRefresh()
+      wx.stopPullDownRefresh()
     })
   },
 
   /**
-   * 先从缓存读取数据，立即渲染。
-   * 命中缓存时跳过骨架屏，否则保持 isLoading=true 等待接口返回。
+   * 检查是否已登录。
+   * @returns {boolean} 是否登录。
    */
+  checkLoginStatus() {
+    const token = getAuthToken()
+    const userId = wx.getStorageSync('current_user_id')
+    return !!(token && userId)
+  },
+
+  /**
+   * 需要登录的操作 - 检查是否登录，未登录则跳转登录。
+   * @returns {boolean} 是否可继续操作。
+   */
+  requireLogin() {
+    if (this.checkLoginStatus()) return true
+    wx.navigateTo({ url: '/pages/auth/login/index' })
+    return false
+  },
+
   loadFromCache() {
     const cachedChild = cache.getCache('current_child')
     if (cachedChild && cachedChild._id) {
@@ -45,91 +71,65 @@ Page({
         app.globalData.currentChild = cachedChild
       }
     }
-    // 轮播图不从缓存加载（临时文件路径重启后失效），由 fetchBanners 实时获取
   },
 
-  /**
-   * 初始化页面数据：获取档案信息与轮播图。
-   * 完成后关闭骨架屏。
-   * @returns {Promise<void>}
-   */
   async initData() {
-    // 1. Get Child Info from Global Data or Cloud
-    if (app.globalData.currentChild) {
+    const loggedIn = this.checkLoginStatus()
+    this.setData({ isLoggedIn: loggedIn })
+
+    if (loggedIn) {
+      if (app.globalData.currentChild) {
         this.setData({ childInfo: app.globalData.currentChild })
         cache.setCache('current_child', app.globalData.currentChild)
-    } else {
-        // Fetch if missing
+      } else {
         await this.fetchChildInfo()
+      }
     }
-    
-    // 2. Fetch Banners
+
     await this.fetchBanners()
 
-    // 3. 数据加载完毕，关闭骨架屏
     if (this.data.isLoading) {
       this.setData({ isLoading: false })
     }
   },
 
   async fetchChildInfo() {
-      try {
-          const data = await getChildren()
-          if (data && Array.isArray(data.list) && data.list.length > 0) {
-              const list = data.list.filter((c) => c && c._id)
-              const cachedId = wx.getStorageSync('current_child_id') || ''
-              const child = cachedId ? list.find((c) => c._id === cachedId) : list[0]
-              if (child) {
-                app.globalData.currentChild = child
-                wx.setStorageSync('current_child_id', child._id)
-                this.setData({ childInfo: child })
-                // 写入缓存
-                cache.setCache('current_child', child)
-                cache.setCache('children_list', list)
-              }
-          } else {
-              console.log('User has no profile yet')
-          }
-      } catch (e) {
-          console.error(e)
+    try {
+      const data = await getChildren()
+      if (data && Array.isArray(data.list) && data.list.length > 0) {
+        const list = data.list.filter((c) => c && c._id)
+        const cachedId = wx.getStorageSync('current_child_id') || ''
+        const child = cachedId ? list.find((c) => c._id === cachedId) : list[0]
+        if (child) {
+          app.globalData.currentChild = child
+          wx.setStorageSync('current_child_id', child._id)
+          this.setData({ childInfo: child })
+          cache.setCache('current_child', child)
+          cache.setCache('children_list', list)
+        }
+      } else {
+        console.log('User has no profile yet')
       }
+    } catch (e) {
+      console.error(e)
+    }
   },
 
   async fetchBanners() {
     try {
       const data = await getBanners()
       if (data && Array.isArray(data.list)) {
-        const rawList = data.list
-
-        // 过滤无效地址
-        const list = rawList.filter((b) => {
+        const list = data.list.filter((b) => {
           const url = b && b.image_url
           if (typeof url !== 'string') return false
           const u = url.trim()
-          if (!u) return false
-          if (u.startsWith('/pages/')) return false
+          if (!u || u.startsWith('/pages/')) return false
           return true
-        })
+        }).filter(Boolean)
 
-        console.log('[首页] 云端返回轮播图数量:', list.length)
-
-        if (list.length === 0) {
-          this.setData({ banners: [] })
-          return
-        }
-
-        const validList = list.filter(Boolean)
-        console.log('[首页] 可用轮播图数量:', validList.length)
-
-        if (validList.length === 0) {
-          this.setData({ banners: [] })
-          return
-        }
-
-        this.setData({ banners: validList })
+        this.setData({ banners: list })
       } else {
         this.setData({ banners: [] })
-        console.warn('[首页] 获取轮播图失败')
       }
     } catch (e) {
       this.setData({ banners: [] })
@@ -137,28 +137,33 @@ Page({
     }
   },
 
+  /** 跳转登录页 */
+  goToLogin() {
+    wx.navigateTo({ url: '/pages/auth/login/index' })
+  },
+
   goToAppointment() {
+    if (!this.requireLogin()) return
     wx.navigateTo({ url: '/pages/appointment/list/index' })
   },
 
   goToDashboard() {
+    if (!this.requireLogin()) return
     wx.navigateTo({ url: '/pages/dashboard/index/index' })
   },
 
-  /**
-   * 跳转到问卷中心 tab 页面。
-   * @param {void} 无 无入参。
-   * @returns {void} 无返回值，内部执行 tab 切换。
-   */
   goToQuestionnaire() {
+    if (!this.requireLogin()) return
     wx.switchTab({ url: '/pages/questionnaire/index/index' })
   },
 
   goToAppointments() {
+    if (!this.requireLogin()) return
     wx.navigateTo({ url: '/pages/user/appointments/index' })
   },
 
   goToRecordArchive() {
+    if (!this.requireLogin()) return
     if (app.globalData.currentChild && app.globalData.currentChild._id) {
       wx.navigateTo({ url: `/pages/records/edit/index?child_id=${encodeURIComponent(app.globalData.currentChild._id)}` })
       return
@@ -167,10 +172,12 @@ Page({
   },
 
   goToProfile() {
+    if (!this.requireLogin()) return
     wx.navigateTo({ url: '/pages/profile/edit/index' })
   },
 
   goSelectChild() {
+    if (!this.requireLogin()) return
     wx.navigateTo({ url: '/pages/children/select/index' })
   }
 })
