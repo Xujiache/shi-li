@@ -11,7 +11,7 @@ function getApiBaseUrl() {
       return String(app.globalData.apiBaseUrl).replace(/\/+$/, '')
     }
   } catch (e) {}
-  return 'https://api.xujiacheng.top/api/v1'
+  return 'https://api.gmxd.asia/api/v1'
 }
 
 /**

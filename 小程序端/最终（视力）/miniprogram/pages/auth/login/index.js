@@ -37,6 +37,16 @@ Page({
     autoLoginTried: false
   },
 
+  /** 返回上一页，若页面栈无历史则回首页 */
+  goBack() {
+    const pages = getCurrentPages()
+    if (pages.length > 1) {
+      wx.navigateBack()
+    } else {
+      wx.switchTab({ url: '/pages/home/index/index' })
+    }
+  },
+
   onLoad() {
     this.fetchTerms()
     this.checkRememberedUser()

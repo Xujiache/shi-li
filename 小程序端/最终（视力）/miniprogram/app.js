@@ -53,7 +53,7 @@ App({
   globalData: {
     userInfo: null,
     currentChild: null,
-    apiBaseUrl: 'https://api.xujiacheng.top/api/v1',
+    apiBaseUrl: 'https://api.gmxd.asia/api/v1',
     __tabbarList: [
       {
         pagePath: 'pages/home/index/index',
