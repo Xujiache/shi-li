@@ -6,16 +6,16 @@
         <div>
           <div class="pf-editor-title">档案字段配置</div>
           <div class="pf-editor-desc">配置小程序「孩子档案」页中的字段分区、字段类型与选项，右侧可实时预览效果</div>
-        </div>
+            </div>
         <div class="pf-editor-actions">
           <ElButton @click="showPreview = !showPreview" v-ripple>
             {{ showPreview ? '隐藏预览' : '显示预览' }}
           </ElButton>
           <ElButton @click="addSection" v-ripple>新增分区</ElButton>
-          <ElButton @click="reload" :loading="loading" v-ripple>刷新</ElButton>
-          <ElButton type="primary" @click="save" :loading="saving" v-ripple>保存</ElButton>
+            <ElButton @click="reload" :loading="loading" v-ripple>刷新</ElButton>
+            <ElButton type="primary" @click="save" :loading="saving" v-ripple>保存</ElButton>
+          </div>
         </div>
-      </div>
 
       <div class="pf-editor-body">
         <div
@@ -30,8 +30,8 @@
               <ElInput v-model="section.label" size="small" class="ed-section-name" placeholder="分区名称" />
               <ElTag size="small" :type="section.enabled ? 'success' : 'info'" effect="light">
                 {{ section.enabled ? '启用' : '停用' }}
-              </ElTag>
-            </div>
+            </ElTag>
+          </div>
             <div class="ed-section-right">
               <ElButtonGroup size="small">
                 <ElButton :icon="ArrowUp" :disabled="si === 0" @click="moveSection(si, -1)" />
@@ -82,7 +82,7 @@
                     <ElButton size="small" type="danger" link>删除</ElButton>
                   </template>
                 </ElPopconfirm>
-              </div>
+        </div>
 
               <div v-if="field.type === 'select' || field.type === 'multi_select'" class="ed-field-options">
                 <span class="ed-options-label">选项列表：</span>
@@ -98,7 +98,7 @@
                 <div class="ed-opt-add">
                   <ElInput
                     v-model="optionInputs[field.key]"
-                    size="small"
+                  size="small"
                     placeholder="新选项，回车添加"
                     @keyup.enter="addOption(field)"
                     class="ed-opt-input"
@@ -110,8 +110,8 @@
 
             <div class="ed-add-field">
               <ElButton size="small" type="primary" plain @click="addField(section)" v-ripple>+ 新增字段</ElButton>
-            </div>
-          </template>
+              </div>
+            </template>
         </div>
 
         <div v-if="!sections.length && !loading" class="ed-empty">
@@ -295,7 +295,7 @@
                   <div class="mp-readonly-title">{{ pf.label || '未命名' }}（由专业人员填写）</div>
                   <div class="mp-readonly-content">暂无内容</div>
                 </div>
-              </template>
+            </template>
 
               <div v-if="ps.fields.length === 0" class="mp-empty-section">暂无启用的字段</div>
             </div>
