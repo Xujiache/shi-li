@@ -1,10 +1,12 @@
 /* 自定义导航栏 */
 .custom-nav {
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
   z-index: 10;
-  padding-top: calc(env(safe-area-inset-top) + 8rpx);
-  padding-left: 12rpx;
-  height: 88rpx;
+  padding-top: calc(env(safe-area-inset-top) + 10px);
+  padding-left: 16rpx;
+  height: 44px;
   display: flex;
   align-items: center;
 }
