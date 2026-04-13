@@ -1,31 +1,55 @@
 const app = getApp()
-const { getSchoolOptions, getChildren, createChild, updateChild } = require('../../../utils/api')
+const { getSchoolOptions, getChildren, createChild, updateChild, getProfileFieldConfig } = require('../../../utils/api')
 
-const TCM_SYMPTOM_KEYS = [
-  { key: 'eye_fatigue', label: '眼干易疲劳' },
-  { key: 'blurred', label: '视物昏花' },
-  { key: 'night_vision', label: '夜视力差' },
-  { key: 'waist_leg', label: '腰酸腿软' },
-  { key: 'poor_sleep', label: '睡眠差多梦' },
-  { key: 'fatigue_attention', label: '乏力注意力差' },
-  { key: 'pale_face', label: '面色少华' },
-  { key: 'tongue_pulse_a', label: '舌质淡/少苔' },
-  { key: 'weak_pulse', label: '脉细弱' }
-]
+const KNOWN_CHILD_COLUMNS = new Set([
+  'vision_r', 'vision_l', 'vision_both',
+  'refraction_r_detail', 'refraction_l_detail',
+  'curvature_r', 'curvature_l',
+  'axial_length_r', 'axial_length_l',
+  'diagnosis_json', 'management_plan', 'optometrist_name', 'exam_date',
+  'tcm_symptoms_json', 'tcm_symptom_other',
+  'tcm_syndrome_types', 'tcm_syndrome_other',
+  'risk_level', 'treatment_plans', 'treatment_other', 'doctor_name'
+])
 
-const SEVERITY_OPTIONS = ['无', '轻', '中', '重']
+var NESTED_FIELD_MAP = {
+  'diagnosis_vision': { parent: 'diagnosis_json', subkey: 'vision' },
+  'diagnosis_refraction': { parent: 'diagnosis_json', subkey: 'refraction' },
+  'diagnosis_axial': { parent: 'diagnosis_json', subkey: 'axial' },
+  'diagnosis_curvature': { parent: 'diagnosis_json', subkey: 'curvature' },
+  'diagnosis_axial_ratio': { parent: 'diagnosis_json', subkey: 'axial_ratio' }
+}
 
-const SYNDROME_OPTIONS = ['肝肾亏虚证', '肾精不足证', '肝血不足证', '脾气虚弱证', '心脾两虚证']
+var ALIAS_FIELD_MAP = {
+  'tcm_symptoms': 'tcm_symptoms_json'
+}
 
-const RISK_OPTIONS = ['低危', '中危', '高危（眼轴快涨型）']
+var COMPOUND_FIELDS = new Set(['refraction_r_detail', 'refraction_l_detail'])
 
-const TREATMENT_OPTIONS = ['补肾填精固轴', '养肝血明目', '健脾益气升清', '综合干预（中药+外治+训练）']
+function compoundToString(obj) {
+  if (!obj || typeof obj !== 'object') return ''
+  var parts = []
+  if (obj.s) parts.push('S:' + obj.s)
+  if (obj.c) parts.push('C:' + obj.c)
+  if (obj.a) parts.push('A:' + obj.a)
+  return parts.join(' ')
+}
 
-const DIAG_VISION_OPTIONS = ['正常', '不正常']
-const DIAG_REFRACTION_OPTIONS = ['正常', '近视', '散光', '弱视', '原始储备低']
-const DIAG_AXIAL_OPTIONS = ['正常', '眼轴长', '眼轴短']
-const DIAG_CURVATURE_OPTIONS = ['正常', '曲率陡', '曲率平']
-const DIAG_AXIAL_RATIO_OPTIONS = ['3.0', '＞3.1', '＞3.3']
+function stringToCompound(str) {
+  if (!str || typeof str !== 'string') return { s: '', c: '', a: '' }
+  var result = { s: '', c: '', a: '' }
+  var parts = str.split(/\s+/)
+  parts.forEach(function(p) {
+    var kv = p.split(':')
+    if (kv.length === 2) {
+      var k = kv[0].toUpperCase()
+      if (k === 'S') result.s = kv[1]
+      else if (k === 'C') result.c = kv[1]
+      else if (k === 'A') result.a = kv[1]
+    }
+  })
+  return result
+}
 
 Page({
   data: {
@@ -41,33 +65,12 @@ Page({
     classHelper: '',
     from: '',
 
-    tcmSymptomKeys: TCM_SYMPTOM_KEYS,
-    severityOptions: SEVERITY_OPTIONS,
-    syndromeOptions: SYNDROME_OPTIONS,
-    riskOptions: RISK_OPTIONS,
-    treatmentOptions: TREATMENT_OPTIONS,
-    diagVisionOptions: DIAG_VISION_OPTIONS,
-    diagRefractionOptions: DIAG_REFRACTION_OPTIONS,
-    diagAxialOptions: DIAG_AXIAL_OPTIONS,
-    diagCurvatureOptions: DIAG_CURVATURE_OPTIONS,
-    diagAxialRatioOptions: DIAG_AXIAL_RATIO_OPTIONS,
+    dynamicSections: [],
+    formValues: {},
+    pickerIndexes: {},
+    multiSelectState: {},
 
-    sections: {
-      basic: true,
-      vision: false,
-      diagnosis: false,
-      tcm: false
-    },
-
-    syndromeSelected: {},
-    diagRefractionSelected: {},
-    treatmentSelected: {},
-
-    risk_index: -1,
-    diag_vision_index: -1,
-    diag_axial_index: -1,
-    diag_curvature_index: -1,
-    diag_axial_ratio_index: -1,
+    sections: { basic: true },
 
     form: {
       name: '',
@@ -76,34 +79,7 @@ Page({
       school: '',
       class_name: '',
       height: '',
-      weight: '',
-      vision_r: '',
-      vision_l: '',
-      vision_both: '',
-      refraction_r_detail: { s: '', c: '', a: '' },
-      refraction_l_detail: { s: '', c: '', a: '' },
-      curvature_r: '',
-      curvature_l: '',
-      axial_length_r: '',
-      axial_length_l: '',
-      diagnosis_json: {
-        vision: '',
-        refraction: [],
-        axial: '',
-        curvature: '',
-        axial_ratio: ''
-      },
-      management_plan: '',
-      optometrist_name: '',
-      exam_date: '',
-      tcm_symptoms_json: {},
-      tcm_symptom_other: '',
-      tcm_syndrome_types: [],
-      tcm_syndrome_other: '',
-      risk_level: '',
-      treatment_plans: [],
-      treatment_other: '',
-      doctor_name: ''
+      weight: ''
     }
   },
 
@@ -118,8 +94,42 @@ Page({
     const from = options && options.from ? String(options.from) : ''
     if (id) this.setData({ childId: id })
     if (from) this.setData({ from })
+    this.loadFieldConfig()
     this.loadSchoolOptions()
     this.loadCurrentChild()
+  },
+
+  async loadFieldConfig() {
+    try {
+      const data = await getProfileFieldConfig()
+      if (data && data.config && Array.isArray(data.config.sections)) {
+        const dynamicSections = data.config.sections.map((s) => ({
+          key: s.key,
+          label: s.label || '',
+          enabled: s.enabled !== false,
+          sort_order: s.sort_order || 0,
+          fields: Array.isArray(s.fields) ? s.fields.map((f) => ({
+            key: f.key,
+            label: f.label || '',
+            type: f.type || 'text',
+            options: Array.isArray(f.options) ? f.options : [],
+            placeholder: f.placeholder || '',
+            enabled: f.enabled !== false,
+            required: f.required === true,
+            sort_order: f.sort_order || 0,
+            readonly: f.readonly === true
+          })) : []
+        }))
+        const sectionToggles = {}
+        dynamicSections.forEach((s) => { sectionToggles[s.key] = false })
+        this.setData({
+          dynamicSections,
+          sections: { basic: true, ...sectionToggles }
+        })
+      }
+    } catch (e) {
+      console.warn('加载档案字段配置失败，使用默认配置', e)
+    }
   },
 
   async loadSchoolOptions() {
@@ -221,88 +231,108 @@ Page({
         if (child) {
           app.globalData.currentChild = child
           wx.setStorageSync('current_child_id', child._id)
-
-          const syndromeSelected = {}
-          ;(Array.isArray(child.tcm_syndrome_types) ? child.tcm_syndrome_types : []).forEach((s) => { if (s) syndromeSelected[s] = true })
-
-          const diagRefractionSelected = {}
-          const diagJson = child.diagnosis_json && typeof child.diagnosis_json === 'object' ? child.diagnosis_json : {}
-          ;(Array.isArray(diagJson.refraction) ? diagJson.refraction : []).forEach((s) => { if (s) diagRefractionSelected[s] = true })
-
-          const treatmentSelected = {}
-          ;(Array.isArray(child.treatment_plans) ? child.treatment_plans : []).forEach((s) => { if (s) treatmentSelected[s] = true })
-
-          this.setData({
-            childId: child._id,
-            syndromeSelected,
-            diagRefractionSelected,
-            treatmentSelected,
-            form: {
-              ...this.data.form,
-              name: child.name || '',
-              gender: child.gender || '',
-              dob: child.dob || '',
-              school: child.school || '',
-              class_name: child.class_name || '',
-              height: child.height != null ? String(child.height) : '',
-              weight: child.weight != null ? String(child.weight) : '',
-              vision_r: child.vision_r || '',
-              vision_l: child.vision_l || '',
-              vision_both: child.vision_both || '',
-              refraction_r_detail: child.refraction_r_detail && typeof child.refraction_r_detail === 'object'
-                ? { s: child.refraction_r_detail.s || '', c: child.refraction_r_detail.c || '', a: child.refraction_r_detail.a || '' }
-                : { s: '', c: '', a: '' },
-              refraction_l_detail: child.refraction_l_detail && typeof child.refraction_l_detail === 'object'
-                ? { s: child.refraction_l_detail.s || '', c: child.refraction_l_detail.c || '', a: child.refraction_l_detail.a || '' }
-                : { s: '', c: '', a: '' },
-              curvature_r: child.curvature_r || '',
-              curvature_l: child.curvature_l || '',
-              axial_length_r: child.axial_length_r || '',
-              axial_length_l: child.axial_length_l || '',
-              diagnosis_json: {
-                vision: diagJson.vision || '',
-                refraction: Array.isArray(diagJson.refraction) ? diagJson.refraction : [],
-                axial: diagJson.axial || '',
-                curvature: diagJson.curvature || '',
-                axial_ratio: diagJson.axial_ratio || ''
-              },
-              management_plan: child.management_plan || '',
-              optometrist_name: child.optometrist_name || '',
-              exam_date: child.exam_date || '',
-              tcm_symptoms_json: child.tcm_symptoms_json && typeof child.tcm_symptoms_json === 'object' ? child.tcm_symptoms_json : {},
-              tcm_symptom_other: child.tcm_symptom_other || '',
-              tcm_syndrome_types: Array.isArray(child.tcm_syndrome_types) ? child.tcm_syndrome_types : [],
-              tcm_syndrome_other: child.tcm_syndrome_other || '',
-              risk_level: child.risk_level || '',
-              treatment_plans: Array.isArray(child.treatment_plans) ? child.treatment_plans : [],
-              treatment_other: child.treatment_other || '',
-              doctor_name: child.doctor_name || ''
-            }
-          })
-          this.syncSchoolClassFromForm(false)
+          this.setData({ childId: child._id })
+          this.fillFormFromChild(child)
         }
       }
-      this.updatePickerIndexes()
       this.updateAgeAndSubmit()
     } catch (e) {
       console.error(e)
       this.syncSchoolClassFromForm(false)
-      this.updatePickerIndexes()
       this.updateAgeAndSubmit()
     }
   },
+
+  fillFormFromChild(child) {
+    this.setData({
+      form: {
+        name: child.name || '',
+        gender: child.gender || '',
+        dob: child.dob || '',
+        school: child.school || '',
+        class_name: child.class_name || '',
+        height: child.height != null ? String(child.height) : '',
+        weight: child.weight != null ? String(child.weight) : ''
+      }
+    })
+    this.syncSchoolClassFromForm(false)
+
+    const formValues = {}
+    const multiSelectState = {}
+    const pickerIndexes = {}
+
+    const dynSections = this.data.dynamicSections || []
+    dynSections.forEach((section) => {
+      section.fields.forEach((field) => {
+        const val = this._getChildFieldValue(child, field.key)
+
+        if (field.type === 'multi_select') {
+          const arr = Array.isArray(val) ? val : []
+          formValues[field.key] = arr
+          arr.forEach((v) => { multiSelectState[field.key + '_' + v] = true })
+          ;(field.options || []).forEach((opt) => {
+            if (!arr.includes(opt)) multiSelectState[field.key + '_' + opt] = false
+          })
+        } else if (field.type === 'select') {
+          const strVal = typeof val === 'string' ? val : ''
+          formValues[field.key] = strVal
+          const idx = (field.options || []).indexOf(strVal)
+          pickerIndexes[field.key] = idx >= 0 ? idx : -1
+        } else {
+          formValues[field.key] = val != null ? String(val) : ''
+        }
+      })
+    })
+
+    this.setData({ formValues, multiSelectState, pickerIndexes })
+  },
+
+  _getChildFieldValue(child, fieldKey) {
+    if (!child) return ''
+
+    if (NESTED_FIELD_MAP[fieldKey]) {
+      var map = NESTED_FIELD_MAP[fieldKey]
+      var parentObj = child[map.parent]
+      if (parentObj && typeof parentObj === 'object') {
+        var v = parentObj[map.subkey]
+        return v != null ? v : ''
+      }
+      return ''
+    }
+
+    if (ALIAS_FIELD_MAP[fieldKey]) {
+      var aliasKey = ALIAS_FIELD_MAP[fieldKey]
+      var raw = child[aliasKey]
+      return raw != null ? raw : ''
+    }
+
+    if (COMPOUND_FIELDS.has(fieldKey)) {
+      var obj = child[fieldKey]
+      if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+        return compoundToString(obj)
+      }
+      return typeof obj === 'string' ? obj : ''
+    }
+
+    if (KNOWN_CHILD_COLUMNS.has(fieldKey)) {
+      var val = child[fieldKey]
+      return val != null ? val : ''
+    }
+
+    var custom = child.custom_fields_json
+    if (custom && typeof custom === 'object' && custom[fieldKey] !== undefined) {
+      return custom[fieldKey]
+    }
+    return ''
+  },
+
+  // ── 基础信息事件 ──
 
   onFieldChange(e) {
     const field = e.currentTarget.dataset.field
     const value = e.detail.value
     this.setData({ [`form.${field}`]: value })
     this.updateAgeAndSubmit()
-  },
-
-  onTextAreaInput(e) {
-    const field = e.currentTarget.dataset.field
-    const value = e.detail.value
-    this.setData({ [`form.${field}`]: value })
   },
 
   onGenderChange(e) {
@@ -315,88 +345,61 @@ Page({
     this.updateAgeAndSubmit()
   },
 
-  onExamDateChange(e) {
-    this.setData({ 'form.exam_date': e.detail.value })
-  },
+  // ── 动态字段事件 ──
 
-  onNestedFieldChange(e) {
-    const path = e.currentTarget.dataset.path
-    const value = e.detail.value
-    if (path) this.setData({ [`form.${path}`]: value })
-  },
-
-  onTcmSeverityChange(e) {
-    const key = e.currentTarget.dataset.key
-    const idx = e.detail.value
-    const severity = SEVERITY_OPTIONS[idx] || ''
-    this.setData({ [`form.tcm_symptoms_json.${key}`]: severity })
-  },
-
-  onTcmSeverityTap(e) {
-    const key = e.currentTarget.dataset.key
-    const value = e.currentTarget.dataset.value
-    if (!key || !value) return
-    const current = (this.data.form.tcm_symptoms_json || {})[key]
-    this.setData({ [`form.tcm_symptoms_json.${key}`]: current === value ? '' : value })
-  },
-
-  toggleSyndrome(e) {
-    const value = e.currentTarget.dataset.value
-    if (!value) return
-    const selected = { ...(this.data.syndromeSelected || {}) }
-    selected[value] = !selected[value]
-    const types = Object.keys(selected).filter((k) => selected[k])
-    this.setData({ syndromeSelected: selected, 'form.tcm_syndrome_types': types })
-  },
-
-  toggleDiagRefraction(e) {
-    const value = e.currentTarget.dataset.value
-    if (!value) return
-    const selected = { ...(this.data.diagRefractionSelected || {}) }
-    selected[value] = !selected[value]
-    const items = Object.keys(selected).filter((k) => selected[k])
-    this.setData({ diagRefractionSelected: selected, 'form.diagnosis_json.refraction': items })
-  },
-
-  toggleTreatment(e) {
-    const value = e.currentTarget.dataset.value
-    if (!value) return
-    const selected = { ...(this.data.treatmentSelected || {}) }
-    selected[value] = !selected[value]
-    const plans = Object.keys(selected).filter((k) => selected[k])
-    this.setData({ treatmentSelected: selected, 'form.treatment_plans': plans })
-  },
-
-  onDiagPickerChange(e) {
+  onDynamicFieldChange(e) {
     const field = e.currentTarget.dataset.field
-    const rangeKey = e.currentTarget.dataset.range
-    const idx = e.detail.value != null ? Number(e.detail.value) : (e.detail.valueIndex != null ? e.detail.valueIndex : -1)
-    const options = this.data[rangeKey] || []
+    const value = e.detail.value || ''
+    this.setData({ [`formValues.${field}`]: value })
+  },
+
+  onDynamicPickerChange(e) {
+    const field = e.currentTarget.dataset.field
+    const options = e.currentTarget.dataset.options || []
+    const idx = Number(e.detail.value)
     const value = options[idx] || ''
-    this.setData({ [`form.diagnosis_json.${field}`]: value, [`diag_${field}_index`]: idx })
-  },
-
-  onRiskChange(e) {
-    const idx = e.detail.value != null ? Number(e.detail.value) : (e.detail.valueIndex != null ? e.detail.valueIndex : -1)
-    const value = RISK_OPTIONS[idx] || ''
-    this.setData({ 'form.risk_level': value, risk_index: idx })
-  },
-
-  updatePickerIndexes() {
-    const f = this.data.form
-    const diagJson = f.diagnosis_json || {}
-    const idxOf = (arr, v) => {
-      const i = (arr || []).indexOf(v)
-      return i >= 0 ? i : -1
-    }
     this.setData({
-      risk_index: idxOf(RISK_OPTIONS, f.risk_level),
-      diag_vision_index: idxOf(DIAG_VISION_OPTIONS, diagJson.vision),
-      diag_axial_index: idxOf(DIAG_AXIAL_OPTIONS, diagJson.axial),
-      diag_curvature_index: idxOf(DIAG_CURVATURE_OPTIONS, diagJson.curvature),
-      diag_axial_ratio_index: idxOf(DIAG_AXIAL_RATIO_OPTIONS, diagJson.axial_ratio)
+      [`formValues.${field}`]: value,
+      [`pickerIndexes.${field}`]: idx
     })
   },
+
+  onDynamicMultiToggle(e) {
+    const field = e.currentTarget.dataset.field
+    const value = e.currentTarget.dataset.value
+    if (!field || !value) return
+
+    const stateKey = field + '_' + value
+    const isOn = !this.data.multiSelectState[stateKey]
+    this.setData({ [`multiSelectState.${stateKey}`]: isOn })
+
+    const dynSections = this.data.dynamicSections || []
+    let fieldOptions = []
+    for (const s of dynSections) {
+      const f = s.fields.find((ff) => ff.key === field)
+      if (f) { fieldOptions = f.options || []; break }
+    }
+
+    const selected = fieldOptions.filter((opt) => {
+      if (opt === value) return isOn
+      return !!this.data.multiSelectState[field + '_' + opt]
+    })
+    this.setData({ [`formValues.${field}`]: selected })
+  },
+
+  onDynamicDateChange(e) {
+    const field = e.currentTarget.dataset.field
+    const value = e.detail.value || ''
+    this.setData({ [`formValues.${field}`]: value })
+  },
+
+  onDynamicTextarea(e) {
+    const field = e.currentTarget.dataset.field
+    const value = e.detail.value || ''
+    this.setData({ [`formValues.${field}`]: value })
+  },
+
+  // ── 提交逻辑 ──
 
   updateAgeAndSubmit() {
     const dob = this.data.form.dob
@@ -416,6 +419,72 @@ Page({
     this.setData({ age, canSubmit })
   },
 
+  _buildPayload() {
+    const f = this.data.form
+    const payload = {
+      name: f.name,
+      gender: f.gender,
+      dob: f.dob,
+      age: this.data.age ? Number(this.data.age) : null,
+      school: f.school,
+      class_name: f.class_name,
+      height: f.height === '' ? null : Number(f.height),
+      weight: f.weight === '' ? null : Number(f.weight)
+    }
+
+    const formValues = this.data.formValues || {}
+    const customFields = {}
+    const nestedAccum = {}
+
+    const dynSections = this.data.dynamicSections || []
+    dynSections.forEach((section) => {
+      if (!section.enabled) return
+      section.fields.forEach((field) => {
+        if (!field.enabled) return
+        const val = formValues[field.key]
+
+        if (NESTED_FIELD_MAP[field.key]) {
+          var map = NESTED_FIELD_MAP[field.key]
+          if (!nestedAccum[map.parent]) nestedAccum[map.parent] = {}
+          if (field.type === 'multi_select') {
+            nestedAccum[map.parent][map.subkey] = Array.isArray(val) ? val : []
+          } else {
+            nestedAccum[map.parent][map.subkey] = val != null ? val : ''
+          }
+        } else if (ALIAS_FIELD_MAP[field.key]) {
+          var dbKey = ALIAS_FIELD_MAP[field.key]
+          if (field.type === 'multi_select') {
+            payload[dbKey] = Array.isArray(val) ? val : []
+          } else {
+            payload[dbKey] = val != null ? val : ''
+          }
+        } else if (COMPOUND_FIELDS.has(field.key)) {
+          payload[field.key] = typeof val === 'string' ? stringToCompound(val) : (val || { s: '', c: '', a: '' })
+        } else if (KNOWN_CHILD_COLUMNS.has(field.key)) {
+          if (field.type === 'multi_select') {
+            payload[field.key] = Array.isArray(val) ? val : []
+          } else {
+            payload[field.key] = val != null ? val : ''
+          }
+        } else {
+          if (val !== undefined && val !== '' && (!Array.isArray(val) || val.length > 0)) {
+            customFields[field.key] = val
+          }
+        }
+      })
+    })
+
+    Object.keys(nestedAccum).forEach(function(parentKey) {
+      payload[parentKey] = nestedAccum[parentKey]
+    })
+
+    if (Object.keys(customFields).length > 0) {
+      payload.custom_fields_json = customFields
+    }
+
+    return payload
+  },
+
   async onSubmit() {
     const f = this.data.form
     if (!this.data.canSubmit) {
@@ -425,33 +494,7 @@ Page({
 
     wx.showLoading({ title: '提交中...' })
     try {
-      const payload = {
-        name: f.name,
-        gender: f.gender,
-        dob: f.dob,
-        age: this.data.age ? Number(this.data.age) : null,
-        school: f.school,
-        class_name: f.class_name,
-        height: f.height === '' ? null : Number(f.height),
-        weight: f.weight === '' ? null : Number(f.weight),
-        vision_r: f.vision_r,
-        vision_l: f.vision_l,
-        vision_both: f.vision_both,
-        refraction_r_detail: f.refraction_r_detail,
-        refraction_l_detail: f.refraction_l_detail,
-        curvature_r: f.curvature_r,
-        curvature_l: f.curvature_l,
-        axial_length_r: f.axial_length_r,
-        axial_length_l: f.axial_length_l,
-        diagnosis_json: f.diagnosis_json,
-        tcm_symptoms_json: f.tcm_symptoms_json,
-        tcm_symptom_other: f.tcm_symptom_other,
-        tcm_syndrome_types: f.tcm_syndrome_types,
-        tcm_syndrome_other: f.tcm_syndrome_other,
-        risk_level: f.risk_level,
-        treatment_plans: f.treatment_plans,
-        treatment_other: f.treatment_other
-      }
+      const payload = this._buildPayload()
 
       let childId = this.data.childId
       if (childId) {

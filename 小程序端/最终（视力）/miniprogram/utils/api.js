@@ -343,12 +343,20 @@ function getQuestionnaireSubmissionDetail(submissionId) {
   })
 }
 
+function getProfileFieldConfig() {
+  return request({
+    method: 'GET',
+    path: '/mobile/config/profile-fields'
+  })
+}
+
 module.exports = {
   registerMobile,
   loginMobile,
   loginWechat,
   getTerms,
   getBanners,
+  getProfileFieldConfig,
   getUserProfile,
   updateUserProfile,
   getChildren,

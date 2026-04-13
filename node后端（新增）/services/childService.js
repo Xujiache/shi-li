@@ -53,6 +53,7 @@ const EDITABLE_CHILD_FIELDS = [
   'treatment_plans',
   'treatment_other',
   'doctor_name',
+  'custom_fields_json',
   'avatar_url',
   'avatar_file_id',
   'active'
@@ -65,7 +66,8 @@ const JSON_CHILD_FIELDS = new Set([
   'diagnosis_json',
   'tcm_symptoms_json',
   'tcm_syndrome_types',
-  'treatment_plans'
+  'treatment_plans',
+  'custom_fields_json'
 ])
 
 /**
@@ -123,6 +125,7 @@ function normalizeChild(row) {
     treatment_plans: safeJsonParse(row.treatment_plans, []),
     treatment_other: row.treatment_other || '',
     doctor_name: row.doctor_name || '',
+    custom_fields_json: safeJsonParse(row.custom_fields_json, {}),
     avatar_url: row.avatar_url || '',
     avatar_file_id: row.avatar_url || '',
     active: row.active !== 0,
@@ -311,10 +314,10 @@ async function createChild(userId, parentPhone, payload) {
         diagnosis_json, management_plan, optometrist_name, exam_date,
         tcm_symptoms_json, tcm_symptom_other, tcm_syndrome_types, tcm_syndrome_other,
         risk_level, treatment_plans, treatment_other, doctor_name,
-        avatar_url, active
+        custom_fields_json, avatar_url, active
       )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-              ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       userId,
@@ -362,6 +365,7 @@ async function createChild(userId, parentPhone, payload) {
       next.treatment_plans || null,
       next.treatment_other || '',
       next.doctor_name || '',
+      next.custom_fields_json || null,
       next.avatar_url || '',
       next.active === undefined ? 1 : next.active
     ]
@@ -397,7 +401,7 @@ async function updateChild(userId, childId, parentPhone, payload) {
           diagnosis_json = ?, management_plan = ?, optometrist_name = ?, exam_date = ?,
           tcm_symptoms_json = ?, tcm_symptom_other = ?, tcm_syndrome_types = ?, tcm_syndrome_other = ?,
           risk_level = ?, treatment_plans = ?, treatment_other = ?, doctor_name = ?,
-          avatar_url = ?, active = ?,
+          custom_fields_json = ?, avatar_url = ?, active = ?,
           updated_at = NOW()
       WHERE id = ?
     `,
@@ -445,6 +449,7 @@ async function updateChild(userId, childId, parentPhone, payload) {
       next.treatment_plans || null,
       next.treatment_other || '',
       next.doctor_name || '',
+      next.custom_fields_json || null,
       next.avatar_url || '',
       next.active === undefined ? 1 : next.active,
       childId

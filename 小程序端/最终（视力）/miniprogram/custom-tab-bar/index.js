@@ -21,8 +21,10 @@ Component({
   methods: {
     updateSafeArea() {
       try {
-        const { safeArea, screenHeight } = wx.getSystemInfoSync()
-        const bottomInset = safeArea && screenHeight ? Math.max(0, screenHeight - safeArea.bottom) : 0
+        const windowInfo = wx.getWindowInfo()
+        const bottomInset = windowInfo.safeArea && windowInfo.screenHeight
+          ? Math.max(0, windowInfo.screenHeight - windowInfo.safeArea.bottom)
+          : 0
         this.setData({ safeBottom: bottomInset })
       } catch (e) {
         this.setData({ safeBottom: 0 })

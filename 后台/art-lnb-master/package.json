@@ -121,5 +121,16 @@
     "vue-demi": "^0.14.9",
     "vue-img-cutter": "^3.0.5",
     "vue-tsc": "~2.1.6"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@tailwindcss/oxide",
+      "core-js",
+      "core-js-pure",
+      "es5-ext",
+      "esbuild",
+      "vue-demi"
+    ]
   }
 }

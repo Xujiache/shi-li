@@ -53,7 +53,7 @@ App({
   globalData: {
     userInfo: null,
     currentChild: null,
-    apiBaseUrl: 'https://api.gmxd.asia/api/v1',
+    apiBaseUrl: 'http://127.0.0.1:3000/api/v1',
     __tabbarList: [
       {
         pagePath: 'pages/home/index/index',

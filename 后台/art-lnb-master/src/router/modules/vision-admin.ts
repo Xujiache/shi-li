@@ -100,6 +100,17 @@ export const visionAdminRoutes: AppRouteRecord = {
       }
     },
     {
+      path: 'profile-fields',
+      name: 'VisionAdminProfileFields',
+      component: '/vision-admin/profile-fields/index',
+      meta: {
+        title: '档案字段配置',
+        icon: 'ri:settings-3-line',
+        keepAlive: true,
+        roles: ['R_SUPER', 'R_ADMIN']
+      }
+    },
+    {
       path: 'children',
       name: 'VisionAdminChildren',
       component: '/vision-admin/children/index',

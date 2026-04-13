@@ -47,7 +47,9 @@ const {
   updateBanner,
   deleteBanner,
   getTermsConfig,
-  updateTermsConfig
+  updateTermsConfig,
+  getProfileFieldConfig,
+  updateProfileFieldConfig
 } = require('../../services/contentService')
 const {
   listAppointmentItems,
@@ -697,6 +699,15 @@ router.delete('/checkup-records/:id', isSuperAdmin, logAdminAction('delete', 'ch
 // ===== 系统配置 =====
 router.get('/system-config/terms', asyncRoute(termsGetHandler))
 router.put('/system-config/terms', isSuperAdmin, logAdminAction('update', 'system_config'), asyncRoute(termsUpdateHandler))
+
+router.get('/system-config/profile-fields', asyncRoute(async (req, res) => {
+  const config = await getProfileFieldConfig()
+  success(res, { config })
+}))
+router.put('/system-config/profile-fields', isSuperAdmin, logAdminAction('update', 'system_config'), asyncRoute(async (req, res) => {
+  const config = await updateProfileFieldConfig(req.body || {})
+  success(res, { config }, '保存成功')
+}))
 
 // ===== 问卷 =====
 router.use('/', questionnaireRoutes)

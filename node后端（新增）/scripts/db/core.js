@@ -203,6 +203,7 @@ async function createCoreTables(connection) {
   await ensureColumn(connection, 'children', 'treatment_plans', "JSON DEFAULT NULL AFTER `risk_level`")
   await ensureColumn(connection, 'children', 'treatment_other', "VARCHAR(255) NOT NULL DEFAULT '' AFTER `treatment_plans`")
   await ensureColumn(connection, 'children', 'doctor_name', "VARCHAR(100) NOT NULL DEFAULT '' AFTER `treatment_other`")
+  await ensureColumn(connection, 'children', 'custom_fields_json', "JSON DEFAULT NULL AFTER `doctor_name`")
 
   await runDDL(
     connection,

@@ -55,121 +55,96 @@
             <ElCol :span="12"><ElFormItem label="体重(kg)"><ElInputNumber v-model="form.weight" :min="0" :max="300" :precision="1" style="width:100%" /></ElFormItem></ElCol>
           </ElRow>
 
-          <ElDivider content-position="left">裸眼视力</ElDivider>
-          <ElRow :gutter="16">
-            <ElCol :span="8"><ElFormItem label="右眼"><ElInput v-model="form.vision_r" placeholder="如 4.8" /></ElFormItem></ElCol>
-            <ElCol :span="8"><ElFormItem label="左眼"><ElInput v-model="form.vision_l" placeholder="如 5.0" /></ElFormItem></ElCol>
-            <ElCol :span="8"><ElFormItem label="双眼"><ElInput v-model="form.vision_both" placeholder="如 5.0" /></ElFormItem></ElCol>
-          </ElRow>
+          <!-- 动态分区（从档案字段配置读取，自动两列布局） -->
+          <template v-for="section in enabledSections" :key="section.key">
+            <ElDivider content-position="left">{{ section.label }}</ElDivider>
+            <ElRow :gutter="16">
+              <template v-for="field in section.fields" :key="field.key">
+                <ElCol
+                  v-if="field.enabled"
+                  :span="(field.type === 'textarea' || field.type === 'readonly' || (field.type === 'multi_select' && (field.options || []).length > 4)) ? 24 : 12"
+                >
+                  <!-- text / number -->
+                  <ElFormItem
+                    v-if="field.type === 'text' || field.type === 'number'"
+                    :label="field.label"
+                    :required="field.required"
+                  >
+                    <ElInput
+                      v-model="dynamicForm[field.key]"
+                      :placeholder="field.placeholder || '请输入'"
+                      :type="field.type === 'number' ? 'number' : 'text'"
+                    />
+                  </ElFormItem>
 
-          <ElDivider content-position="left">右眼屈光度</ElDivider>
-          <ElRow :gutter="16">
-            <ElCol :span="8"><ElFormItem label="S(球镜)"><ElInput v-model="form.refraction_r_s" placeholder="-1.50" /></ElFormItem></ElCol>
-            <ElCol :span="8"><ElFormItem label="C(柱镜)"><ElInput v-model="form.refraction_r_c" placeholder="-0.75" /></ElFormItem></ElCol>
-            <ElCol :span="8"><ElFormItem label="A(轴位)"><ElInput v-model="form.refraction_r_a" placeholder="180" /></ElFormItem></ElCol>
-          </ElRow>
+                  <!-- select -->
+                  <ElFormItem
+                    v-else-if="field.type === 'select'"
+                    :label="field.label"
+                    :required="field.required"
+                  >
+                    <ElSelect v-model="dynamicForm[field.key]" :placeholder="field.placeholder || '请选择'" style="width:100%" clearable>
+                      <ElOption v-for="opt in field.options" :key="opt" :label="opt" :value="opt" />
+                    </ElSelect>
+                  </ElFormItem>
 
-          <ElDivider content-position="left">左眼屈光度</ElDivider>
-          <ElRow :gutter="16">
-            <ElCol :span="8"><ElFormItem label="S(球镜)"><ElInput v-model="form.refraction_l_s" placeholder="-1.25" /></ElFormItem></ElCol>
-            <ElCol :span="8"><ElFormItem label="C(柱镜)"><ElInput v-model="form.refraction_l_c" placeholder="-0.50" /></ElFormItem></ElCol>
-            <ElCol :span="8"><ElFormItem label="A(轴位)"><ElInput v-model="form.refraction_l_a" placeholder="175" /></ElFormItem></ElCol>
-          </ElRow>
+                  <!-- multi_select -->
+                  <ElFormItem
+                    v-else-if="field.type === 'multi_select'"
+                    :label="field.label"
+                    :required="field.required"
+                  >
+                    <ElSelect
+                      v-model="dynamicForm[field.key]"
+                      multiple
+                      :placeholder="field.placeholder || '可多选'"
+                      style="width:100%"
+                      clearable
+                    >
+                      <ElOption v-for="opt in field.options" :key="opt" :label="opt" :value="opt" />
+                    </ElSelect>
+                  </ElFormItem>
 
-          <ElDivider content-position="left">曲率与眼轴</ElDivider>
-          <ElRow :gutter="16">
-            <ElCol :span="12"><ElFormItem label="右眼曲率"><ElInput v-model="form.curvature_r" /></ElFormItem></ElCol>
-            <ElCol :span="12"><ElFormItem label="左眼曲率"><ElInput v-model="form.curvature_l" /></ElFormItem></ElCol>
-          </ElRow>
-          <ElRow :gutter="16">
-            <ElCol :span="12"><ElFormItem label="右眼眼轴"><ElInput v-model="form.axial_length_r" /></ElFormItem></ElCol>
-            <ElCol :span="12"><ElFormItem label="左眼眼轴"><ElInput v-model="form.axial_length_l" /></ElFormItem></ElCol>
-          </ElRow>
+                  <!-- date -->
+                  <ElFormItem
+                    v-else-if="field.type === 'date'"
+                    :label="field.label"
+                    :required="field.required"
+                  >
+                    <ElDatePicker
+                      v-model="dynamicForm[field.key]"
+                      type="date"
+                      value-format="YYYY-MM-DD"
+                      :placeholder="field.placeholder || '请选择日期'"
+                      style="width:100%"
+                    />
+                  </ElFormItem>
 
-          <ElDivider content-position="left">视光诊断</ElDivider>
-          <ElRow :gutter="16">
-            <ElCol :span="12">
-              <ElFormItem label="裸眼视力">
-                <ElSelect v-model="form.diag_vision" placeholder="请选择" style="width:100%">
-                  <ElOption label="正常" value="正常" /><ElOption label="不正常" value="不正常" />
-                </ElSelect>
-              </ElFormItem>
-            </ElCol>
-            <ElCol :span="12">
-              <ElFormItem label="屈光度">
-                <ElSelect v-model="form.diag_refraction" multiple placeholder="可多选" style="width:100%">
-                  <ElOption v-for="opt in diagRefractionOpts" :key="opt" :label="opt" :value="opt" />
-                </ElSelect>
-              </ElFormItem>
-            </ElCol>
-          </ElRow>
-          <ElRow :gutter="16">
-            <ElCol :span="8">
-              <ElFormItem label="眼轴">
-                <ElSelect v-model="form.diag_axial" placeholder="请选择" style="width:100%">
-                  <ElOption v-for="opt in diagAxialOpts" :key="opt" :label="opt" :value="opt" />
-                </ElSelect>
-              </ElFormItem>
-            </ElCol>
-            <ElCol :span="8">
-              <ElFormItem label="角膜曲率">
-                <ElSelect v-model="form.diag_curvature" placeholder="请选择" style="width:100%">
-                  <ElOption v-for="opt in diagCurvatureOpts" :key="opt" :label="opt" :value="opt" />
-                </ElSelect>
-              </ElFormItem>
-            </ElCol>
-            <ElCol :span="8">
-              <ElFormItem label="轴率比">
-                <ElSelect v-model="form.diag_axial_ratio" placeholder="请选择" style="width:100%">
-                  <ElOption v-for="opt in diagAxialRatioOpts" :key="opt" :label="opt" :value="opt" />
-                </ElSelect>
-              </ElFormItem>
-            </ElCol>
-          </ElRow>
+                  <!-- textarea -->
+                  <ElFormItem
+                    v-else-if="field.type === 'textarea'"
+                    :label="field.label"
+                    :required="field.required"
+                  >
+                    <ElInput
+                      v-model="dynamicForm[field.key]"
+                      type="textarea"
+                      :rows="3"
+                      :placeholder="field.placeholder || '请输入'"
+                    />
+                  </ElFormItem>
 
-          <ElDivider content-position="left">视光管理方案</ElDivider>
-          <ElFormItem label="管理方案"><ElInput v-model="form.management_plan" type="textarea" :rows="3" placeholder="建议内容" /></ElFormItem>
-          <ElRow :gutter="16">
-            <ElCol :span="12"><ElFormItem label="验光师"><ElInput v-model="form.optometrist_name" /></ElFormItem></ElCol>
-            <ElCol :span="12"><ElFormItem label="检查日期"><ElDatePicker v-model="form.exam_date" type="date" value-format="YYYY-MM-DD" style="width:100%" /></ElFormItem></ElCol>
-          </ElRow>
-
-          <ElDivider content-position="left">中医证候评分</ElDivider>
-          <ElRow :gutter="16" v-for="item in tcmSymptomKeys" :key="item.key">
-            <ElCol :span="8"><span style="line-height:32px">{{ item.label }}</span></ElCol>
-            <ElCol :span="16">
-              <ElRadioGroup v-model="form.tcm_symptoms[item.key]">
-                <ElRadioButton v-for="s in severityOpts" :key="s" :value="s">{{ s }}</ElRadioButton>
-              </ElRadioGroup>
-            </ElCol>
-          </ElRow>
-          <ElFormItem label="其他症状" style="margin-top:12px"><ElInput v-model="form.tcm_symptom_other" /></ElFormItem>
-
-          <ElDivider content-position="left">中医证型判定</ElDivider>
-          <ElFormItem label="证型">
-            <ElCheckboxGroup v-model="form.tcm_syndrome_types">
-              <ElCheckbox v-for="opt in syndromeOpts" :key="opt" :label="opt" :value="opt" />
-            </ElCheckboxGroup>
-          </ElFormItem>
-          <ElFormItem label="其他证型"><ElInput v-model="form.tcm_syndrome_other" /></ElFormItem>
-
-          <ElDivider content-position="left">风险等级与调理方案</ElDivider>
-          <ElRow :gutter="16">
-            <ElCol :span="12">
-              <ElFormItem label="风险等级">
-                <ElSelect v-model="form.risk_level" placeholder="请选择" style="width:100%">
-                  <ElOption v-for="opt in riskOpts" :key="opt" :label="opt" :value="opt" />
-                </ElSelect>
-              </ElFormItem>
-            </ElCol>
-          </ElRow>
-          <ElFormItem label="调理方案">
-            <ElCheckboxGroup v-model="form.treatment_plans">
-              <ElCheckbox v-for="opt in treatmentOpts" :key="opt" :label="opt" :value="opt" />
-            </ElCheckboxGroup>
-          </ElFormItem>
-          <ElFormItem label="其他方案"><ElInput v-model="form.treatment_other" /></ElFormItem>
-          <ElFormItem label="医师签名"><ElInput v-model="form.doctor_name" /></ElFormItem>
+                  <!-- readonly -->
+                  <ElFormItem
+                    v-else-if="field.type === 'readonly'"
+                    :label="field.label"
+                  >
+                    <ElInput v-model="dynamicForm[field.key]" :placeholder="field.placeholder || '由专业人员填写'" />
+                  </ElFormItem>
+                </ElCol>
+              </template>
+            </ElRow>
+          </template>
         </ElForm>
       </div>
       <template #footer>
@@ -184,31 +159,114 @@
   import { h, onMounted } from 'vue'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import { useTable } from '@/hooks/core/useTable'
-  import { childrenList, childrenCreate, childrenUpdate, childrenDelete, schoolClassesList } from '@/api/vision-admin'
+  import {
+    childrenList, childrenCreate, childrenUpdate, childrenDelete,
+    schoolClassesList, profileFieldConfigGet,
+    type ProfileFieldSection
+  } from '@/api/vision-admin'
   import { ElMessageBox, ElMessage } from 'element-plus'
   import type { FormInstance, FormRules } from 'element-plus'
 
   defineOptions({ name: 'VisionAdminChildren' })
 
-  const tcmSymptomKeys = [
-    { key: 'eye_fatigue', label: '眼干易疲劳' },
-    { key: 'blurred', label: '视物昏花' },
-    { key: 'night_vision', label: '夜视力差' },
-    { key: 'waist_leg', label: '腰酸腿软' },
-    { key: 'poor_sleep', label: '睡眠差多梦' },
-    { key: 'fatigue_attention', label: '乏力注意力差' },
-    { key: 'pale_face', label: '面色少华' },
-    { key: 'tongue_pulse_a', label: '舌质淡/少苔' },
-    { key: 'weak_pulse', label: '脉细弱' }
-  ]
-  const severityOpts = ['无', '轻', '中', '重']
-  const syndromeOpts = ['肝肾亏虚证', '肾精不足证', '肝血不足证', '脾气虚弱证', '心脾两虚证']
-  const riskOpts = ['低危', '中危', '高危（眼轴快涨型）']
-  const treatmentOpts = ['补肾填精固轴', '养肝血明目', '健脾益气升清', '综合干预（中药+外治+训练）']
-  const diagRefractionOpts = ['正常', '近视', '散光', '弱视', '原始储备低']
-  const diagAxialOpts = ['正常', '眼轴长', '眼轴短']
-  const diagCurvatureOpts = ['正常', '曲率陡', '曲率平']
-  const diagAxialRatioOpts = ['3.0', '＞3.1', '＞3.3']
+  const NESTED_FIELD_MAP: Record<string, { parent: string; subkey: string }> = {
+    diagnosis_vision: { parent: 'diagnosis_json', subkey: 'vision' },
+    diagnosis_refraction: { parent: 'diagnosis_json', subkey: 'refraction' },
+    diagnosis_axial: { parent: 'diagnosis_json', subkey: 'axial' },
+    diagnosis_curvature: { parent: 'diagnosis_json', subkey: 'curvature' },
+    diagnosis_axial_ratio: { parent: 'diagnosis_json', subkey: 'axial_ratio' }
+  }
+
+  const ALIAS_FIELD_MAP: Record<string, string> = {
+    tcm_symptoms: 'tcm_symptoms_json'
+  }
+
+  const COMPOUND_FIELDS = new Set(['refraction_r_detail', 'refraction_l_detail'])
+
+  const KNOWN_CHILD_COLUMNS = new Set([
+    'vision_r', 'vision_l', 'vision_both',
+    'refraction_r_detail', 'refraction_l_detail',
+    'curvature_r', 'curvature_l',
+    'axial_length_r', 'axial_length_l',
+    'diagnosis_json', 'management_plan', 'optometrist_name', 'exam_date',
+    'tcm_symptoms_json', 'tcm_symptom_other',
+    'tcm_syndrome_types', 'tcm_syndrome_other',
+    'risk_level', 'treatment_plans', 'treatment_other', 'doctor_name'
+  ])
+
+  function compoundToString(obj: Record<string, string> | null): string {
+    if (!obj) return ''
+    const parts: string[] = []
+    if (obj.s) parts.push('S:' + obj.s)
+    if (obj.c) parts.push('C:' + obj.c)
+    if (obj.a) parts.push('A:' + obj.a)
+    return parts.join(' ')
+  }
+
+  function stringToCompound(str: string): Record<string, string> {
+    const result: Record<string, string> = { s: '', c: '', a: '' }
+    if (!str) return result
+    str.split(/\s+/).forEach((p) => {
+      const [k, v] = p.split(':')
+      if (k && v) {
+        const upper = k.toUpperCase()
+        if (upper === 'S') result.s = v
+        else if (upper === 'C') result.c = v
+        else if (upper === 'A') result.a = v
+      }
+    })
+    return result
+  }
+
+  function readChildFieldValue(row: Record<string, unknown>, fieldKey: string): unknown {
+    if (NESTED_FIELD_MAP[fieldKey]) {
+      const { parent, subkey } = NESTED_FIELD_MAP[fieldKey]
+      const obj = row[parent] as Record<string, unknown> | null
+      return obj?.[subkey] ?? ''
+    }
+    if (ALIAS_FIELD_MAP[fieldKey]) {
+      return row[ALIAS_FIELD_MAP[fieldKey]] ?? ''
+    }
+    if (COMPOUND_FIELDS.has(fieldKey)) {
+      const obj = row[fieldKey] as Record<string, string> | null
+      if (obj && typeof obj === 'object' && !Array.isArray(obj)) return compoundToString(obj)
+      return typeof obj === 'string' ? obj : ''
+    }
+    if (KNOWN_CHILD_COLUMNS.has(fieldKey)) {
+      return row[fieldKey] ?? ''
+    }
+    const custom = row.custom_fields_json as Record<string, unknown> | null
+    return custom?.[fieldKey] ?? ''
+  }
+
+  const fieldSections = ref<ProfileFieldSection[]>([])
+  const enabledSections = computed(() =>
+    fieldSections.value
+      .filter((s) => s.enabled)
+      .map((s) => ({ ...s, fields: s.fields.filter((f) => f.enabled) }))
+      .filter((s) => s.fields.length > 0)
+  )
+
+  async function loadFieldConfig() {
+    try {
+      const res = await profileFieldConfigGet()
+      const data = (res as any)?.data?.config || (res as any)?.config
+      const raw = Array.isArray(data?.sections) ? data.sections : []
+      fieldSections.value = raw.map((s: any) => ({
+        ...s,
+        fields: Array.isArray(s.fields)
+          ? s.fields.map((f: any) => ({
+              ...f,
+              type: f.type || 'text',
+              options: Array.isArray(f.options) ? f.options : [],
+              placeholder: f.placeholder || ''
+            }))
+          : []
+      }))
+    } catch {
+      fieldSections.value = []
+    }
+  }
 
   function handleSearch() {
     Object.assign(searchParams, searchForm.value)
@@ -217,6 +275,7 @@
 
   const schoolOptions = ref<{ school: string; class_name: string }[]>([])
   onMounted(async () => {
+    loadFieldConfig()
     const res = await schoolClassesList({ page: 1, page_size: 500 }) as { list?: { school?: string; class_name?: string }[] }
     schoolOptions.value = res.list?.map((x) => ({ school: x.school ?? '', class_name: x.class_name ?? '' })) ?? []
   })
@@ -233,12 +292,6 @@
   const formRef = ref<FormInstance>()
   const submitting = ref(false)
 
-  function emptyTcmSymptoms(): Record<string, string> {
-    const map: Record<string, string> = {}
-    tcmSymptomKeys.forEach((x) => { map[x.key] = '' })
-    return map
-  }
-
   const form = reactive({
     name: '',
     gender: '男',
@@ -247,37 +300,10 @@
     class_name: '',
     parent_phone: '',
     height: null as number | null,
-    weight: null as number | null,
-    vision_r: '',
-    vision_l: '',
-    vision_both: '',
-    refraction_r_s: '',
-    refraction_r_c: '',
-    refraction_r_a: '',
-    refraction_l_s: '',
-    refraction_l_c: '',
-    refraction_l_a: '',
-    curvature_r: '',
-    curvature_l: '',
-    axial_length_r: '',
-    axial_length_l: '',
-    diag_vision: '',
-    diag_refraction: [] as string[],
-    diag_axial: '',
-    diag_curvature: '',
-    diag_axial_ratio: '',
-    management_plan: '',
-    optometrist_name: '',
-    exam_date: '',
-    tcm_symptoms: emptyTcmSymptoms(),
-    tcm_symptom_other: '',
-    tcm_syndrome_types: [] as string[],
-    tcm_syndrome_other: '',
-    risk_level: '',
-    treatment_plans: [] as string[],
-    treatment_other: '',
-    doctor_name: ''
+    weight: null as number | null
   })
+
+  const dynamicForm = reactive<Record<string, any>>({})
 
   const formRules: FormRules = {
     name: [{ required: true, message: '请输入姓名', trigger: 'blur' }, { max: 20, message: '1-20字', trigger: 'blur' }],
@@ -340,50 +366,26 @@
     form.parent_phone = (row?.parent_phone as string) ?? ''
     form.height = row?.height != null ? Number(row.height) : null
     form.weight = row?.weight != null ? Number(row.weight) : null
-    form.vision_r = (row?.vision_r as string) ?? ''
-    form.vision_l = (row?.vision_l as string) ?? ''
-    form.vision_both = (row?.vision_both as string) ?? ''
 
-    const rrd = row?.refraction_r_detail as Record<string, string> | null
-    form.refraction_r_s = rrd?.s ?? ''
-    form.refraction_r_c = rrd?.c ?? ''
-    form.refraction_r_a = rrd?.a ?? ''
-    const rld = row?.refraction_l_detail as Record<string, string> | null
-    form.refraction_l_s = rld?.s ?? ''
-    form.refraction_l_c = rld?.c ?? ''
-    form.refraction_l_a = rld?.a ?? ''
-
-    form.curvature_r = (row?.curvature_r as string) ?? ''
-    form.curvature_l = (row?.curvature_l as string) ?? ''
-    form.axial_length_r = (row?.axial_length_r as string) ?? ''
-    form.axial_length_l = (row?.axial_length_l as string) ?? ''
-
-    const dj = row?.diagnosis_json as Record<string, unknown> | null
-    form.diag_vision = (dj?.vision as string) ?? ''
-    form.diag_refraction = Array.isArray(dj?.refraction) ? (dj.refraction as string[]) : []
-    form.diag_axial = (dj?.axial as string) ?? ''
-    form.diag_curvature = (dj?.curvature as string) ?? ''
-    form.diag_axial_ratio = (dj?.axial_ratio as string) ?? ''
-
-    form.management_plan = (row?.management_plan as string) ?? ''
-    form.optometrist_name = (row?.optometrist_name as string) ?? ''
-    form.exam_date = (row?.exam_date as string) ?? ''
-
-    const tcmRaw = row?.tcm_symptoms_json as Record<string, string> | null
-    form.tcm_symptoms = { ...emptyTcmSymptoms(), ...(tcmRaw ?? {}) }
-    form.tcm_symptom_other = (row?.tcm_symptom_other as string) ?? ''
-    form.tcm_syndrome_types = Array.isArray(row?.tcm_syndrome_types) ? (row.tcm_syndrome_types as string[]) : []
-    form.tcm_syndrome_other = (row?.tcm_syndrome_other as string) ?? ''
-    form.risk_level = (row?.risk_level as string) ?? ''
-    form.treatment_plans = Array.isArray(row?.treatment_plans) ? (row.treatment_plans as string[]) : []
-    form.treatment_other = (row?.treatment_other as string) ?? ''
-    form.doctor_name = (row?.doctor_name as string) ?? ''
+    const newDynamic: Record<string, any> = {}
+    fieldSections.value.forEach((section) => {
+      section.fields.forEach((field) => {
+        const val = row ? readChildFieldValue(row, field.key) : ''
+        if (field.type === 'multi_select') {
+          newDynamic[field.key] = Array.isArray(val) ? [...val as string[]] : []
+        } else {
+          newDynamic[field.key] = val != null ? String(val) : ''
+        }
+      })
+    })
+    Object.keys(dynamicForm).forEach((k) => delete dynamicForm[k])
+    Object.assign(dynamicForm, newDynamic)
 
     dialogVisible.value = true
   }
 
-  function buildPayload() {
-    return {
+  function buildPayload(): Record<string, unknown> {
+    const payload: Record<string, unknown> = {
       name: form.name,
       gender: form.gender,
       dob: form.dob,
@@ -391,35 +393,41 @@
       class_name: form.class_name,
       parent_phone: form.parent_phone,
       height: form.height,
-      weight: form.weight,
-      vision_r: form.vision_r,
-      vision_l: form.vision_l,
-      vision_both: form.vision_both,
-      refraction_r_detail: { s: form.refraction_r_s, c: form.refraction_r_c, a: form.refraction_r_a },
-      refraction_l_detail: { s: form.refraction_l_s, c: form.refraction_l_c, a: form.refraction_l_a },
-      curvature_r: form.curvature_r,
-      curvature_l: form.curvature_l,
-      axial_length_r: form.axial_length_r,
-      axial_length_l: form.axial_length_l,
-      diagnosis_json: {
-        vision: form.diag_vision,
-        refraction: form.diag_refraction,
-        axial: form.diag_axial,
-        curvature: form.diag_curvature,
-        axial_ratio: form.diag_axial_ratio
-      },
-      management_plan: form.management_plan,
-      optometrist_name: form.optometrist_name,
-      exam_date: form.exam_date,
-      tcm_symptoms_json: form.tcm_symptoms,
-      tcm_symptom_other: form.tcm_symptom_other,
-      tcm_syndrome_types: form.tcm_syndrome_types,
-      tcm_syndrome_other: form.tcm_syndrome_other,
-      risk_level: form.risk_level,
-      treatment_plans: form.treatment_plans,
-      treatment_other: form.treatment_other,
-      doctor_name: form.doctor_name
+      weight: form.weight
     }
+
+    const nestedAccum: Record<string, Record<string, unknown>> = {}
+    const customFields: Record<string, unknown> = {}
+
+    fieldSections.value.forEach((section) => {
+      if (!section.enabled) return
+      section.fields.forEach((field) => {
+        if (!field.enabled) return
+        const val = dynamicForm[field.key]
+
+        if (NESTED_FIELD_MAP[field.key]) {
+          const { parent, subkey } = NESTED_FIELD_MAP[field.key]
+          if (!nestedAccum[parent]) nestedAccum[parent] = {}
+          nestedAccum[parent][subkey] = field.type === 'multi_select' ? (Array.isArray(val) ? val : []) : (val ?? '')
+        } else if (ALIAS_FIELD_MAP[field.key]) {
+          const dbKey = ALIAS_FIELD_MAP[field.key]
+          payload[dbKey] = field.type === 'multi_select' ? (Array.isArray(val) ? val : []) : (val ?? '')
+        } else if (COMPOUND_FIELDS.has(field.key)) {
+          payload[field.key] = typeof val === 'string' ? stringToCompound(val) : (val || { s: '', c: '', a: '' })
+        } else if (KNOWN_CHILD_COLUMNS.has(field.key)) {
+          payload[field.key] = field.type === 'multi_select' ? (Array.isArray(val) ? val : []) : (val ?? '')
+        } else {
+          if (val !== undefined && val !== '' && (!Array.isArray(val) || val.length > 0)) {
+            customFields[field.key] = val
+          }
+        }
+      })
+    })
+
+    Object.entries(nestedAccum).forEach(([k, v]) => { payload[k] = v })
+    if (Object.keys(customFields).length > 0) payload.custom_fields_json = customFields
+
+    return payload
   }
 
   async function submit() {

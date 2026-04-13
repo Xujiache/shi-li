@@ -48,171 +48,120 @@
       </view>
     </view>
 
-    <!-- ========== 二、视力检查 ========== -->
-    <view class="card">
-      <view class="card-header" catchtap="toggleSection" data-key="vision">
+    <!-- ========== 动态分区（基于配置渲染） ========== -->
+    <view
+      class="card"
+      wx:for="{{dynamicSections}}"
+      wx:key="key"
+      wx:if="{{item.enabled}}"
+      style="order:{{item.sort_order}}"
+    >
+      <view class="card-header" catchtap="toggleSection" data-key="{{item.key}}">
         <view class="card-title-row">
-          <text class="card-title">二、视力检查</text>
-          <text class="card-badge" wx:if="{{form.vision_r || form.vision_l}}">已填</text>
+          <text class="card-title">{{item.label}}</text>
         </view>
-        <text class="card-arrow {{sections.vision ? 'open' : ''}}">▸</text>
+        <text class="card-arrow {{sections[item.key] ? 'open' : ''}}">▸</text>
       </view>
-      <view class="card-body {{sections.vision ? 'show' : 'hide'}}">
-        <view class="sub-label">裸眼视力</view>
-        <view class="row-3">
-          <view class="col"><ui-field label="右眼" type="digit" value="{{form.vision_r}}" placeholder="4.8" bind:change="onFieldChange" data-field="vision_r" /></view>
-          <view class="col"><ui-field label="左眼" type="digit" value="{{form.vision_l}}" placeholder="5.0" bind:change="onFieldChange" data-field="vision_l" /></view>
-          <view class="col"><ui-field label="双眼" type="digit" value="{{form.vision_both}}" placeholder="5.0" bind:change="onFieldChange" data-field="vision_both" /></view>
-        </view>
+      <view class="card-body cfg-body {{sections[item.key] ? 'show' : 'hide'}}">
+        <block
+          wx:for="{{item.fields}}"
+          wx:for-item="field"
+          wx:key="key"
+          wx:if="{{field.enabled}}"
+        >
+          <!-- text 类型：文本输入 -->
+          <view wx:if="{{field.type === 'text'}}" class="input-item" style="order:{{field.sort_order}}">
+            <ui-field
+              label="{{field.label}}"
+              required="{{field.required}}"
+              value="{{formValues[field.key] || ''}}"
+              placeholder="{{field.placeholder || '请输入'}}"
+              bind:change="onDynamicFieldChange"
+              data-field="{{field.key}}"
+            />
+          </view>
 
-        <view class="sub-label">右眼屈光度</view>
-        <view class="row-3">
-          <view class="col"><ui-field label="S球镜" value="{{form.refraction_r_detail.s}}" placeholder="-1.50" bind:change="onNestedFieldChange" data-path="refraction_r_detail.s" /></view>
-          <view class="col"><ui-field label="C柱镜" value="{{form.refraction_r_detail.c}}" placeholder="-0.75" bind:change="onNestedFieldChange" data-path="refraction_r_detail.c" /></view>
-          <view class="col"><ui-field label="A轴位" value="{{form.refraction_r_detail.a}}" placeholder="180" bind:change="onNestedFieldChange" data-path="refraction_r_detail.a" /></view>
-        </view>
+          <!-- number 类型：数字输入 -->
+          <view wx:elif="{{field.type === 'number'}}" class="input-item" style="order:{{field.sort_order}}">
+            <ui-field
+              label="{{field.label}}"
+              required="{{field.required}}"
+              type="digit"
+              value="{{formValues[field.key] || ''}}"
+              placeholder="{{field.placeholder || '请输入数字'}}"
+              bind:change="onDynamicFieldChange"
+              data-field="{{field.key}}"
+            />
+          </view>
 
-        <view class="sub-label">左眼屈光度</view>
-        <view class="row-3">
-          <view class="col"><ui-field label="S球镜" value="{{form.refraction_l_detail.s}}" placeholder="-1.25" bind:change="onNestedFieldChange" data-path="refraction_l_detail.s" /></view>
-          <view class="col"><ui-field label="C柱镜" value="{{form.refraction_l_detail.c}}" placeholder="-0.50" bind:change="onNestedFieldChange" data-path="refraction_l_detail.c" /></view>
-          <view class="col"><ui-field label="A轴位" value="{{form.refraction_l_detail.a}}" placeholder="175" bind:change="onNestedFieldChange" data-path="refraction_l_detail.a" /></view>
-        </view>
+          <!-- select 类型：单选下拉 -->
+          <view wx:elif="{{field.type === 'select'}}" class="input-item" style="order:{{field.sort_order}}">
+            <text class="field-label">{{field.label}} <text class="req" wx:if="{{field.required}}">*</text></text>
+            <picker
+              mode="selector"
+              range="{{field.options}}"
+              value="{{pickerIndexes[field.key] >= 0 ? pickerIndexes[field.key] : 0}}"
+              bindchange="onDynamicPickerChange"
+              data-field="{{field.key}}"
+              data-options="{{field.options}}"
+            >
+              <view class="picker-box">{{formValues[field.key] || field.placeholder || '请选择'}}</view>
+            </picker>
+          </view>
 
-        <view class="sub-label">曲率与眼轴</view>
-        <view class="row-2">
-          <view class="col"><ui-field label="右眼曲率" value="{{form.curvature_r}}" placeholder="" bind:change="onFieldChange" data-field="curvature_r" /></view>
-          <view class="col"><ui-field label="左眼曲率" value="{{form.curvature_l}}" placeholder="" bind:change="onFieldChange" data-field="curvature_l" /></view>
-        </view>
-        <view class="row-2">
-          <view class="col"><ui-field label="右眼眼轴" value="{{form.axial_length_r}}" placeholder="" bind:change="onFieldChange" data-field="axial_length_r" /></view>
-          <view class="col"><ui-field label="左眼眼轴" value="{{form.axial_length_l}}" placeholder="" bind:change="onFieldChange" data-field="axial_length_l" /></view>
-        </view>
-      </view>
-    </view>
-
-    <!-- ========== 三、视光诊断 ========== -->
-    <view class="card">
-      <view class="card-header" catchtap="toggleSection" data-key="diagnosis">
-        <view class="card-title-row">
-          <text class="card-title">三、视光诊断</text>
-          <text class="card-badge" wx:if="{{form.diagnosis_json.vision}}">已填</text>
-        </view>
-        <text class="card-arrow {{sections.diagnosis ? 'open' : ''}}">▸</text>
-      </view>
-      <view class="card-body {{sections.diagnosis ? 'show' : 'hide'}}">
-        <view class="input-item">
-          <text class="field-label">裸眼视力</text>
-          <picker mode="selector" range="{{diagVisionOptions}}" value="{{diag_vision_index}}" bindchange="onDiagPickerChange" data-field="vision" data-range="diagVisionOptions">
-            <view class="picker-box">{{form.diagnosis_json.vision || '请选择'}}</view>
-          </picker>
-        </view>
-
-        <view class="input-item">
-          <text class="field-label">屈光度（可多选）</text>
-          <view class="pill-row">
-            <view class="pill {{diagRefractionSelected[item] ? 'on' : ''}}" wx:for="{{diagRefractionOptions}}" wx:key="*this" catchtap="toggleDiagRefraction" data-value="{{item}}">
-              <text class="pill-check">{{diagRefractionSelected[item] ? '✓' : ''}}</text>
-              <text>{{item}}</text>
+          <!-- multi_select 类型：多选标签 -->
+          <view wx:elif="{{field.type === 'multi_select'}}" class="input-item" style="order:{{field.sort_order}}">
+            <text class="field-label">{{field.label}}（可多选） <text class="req" wx:if="{{field.required}}">*</text></text>
+            <view class="pill-row">
+              <view
+                class="pill {{multiSelectState[field.key + '_' + opt] ? 'on' : ''}}"
+                wx:for="{{field.options}}"
+                wx:for-item="opt"
+                wx:key="*this"
+                catchtap="onDynamicMultiToggle"
+                data-field="{{field.key}}"
+                data-value="{{opt}}"
+              >
+                <text class="pill-check">{{multiSelectState[field.key + '_' + opt] ? '✓' : ''}}</text>
+                <text>{{opt}}</text>
+              </view>
             </view>
           </view>
-        </view>
 
-        <view class="row-3">
-          <view class="col">
-            <view class="input-item">
-              <text class="field-label">眼轴</text>
-              <picker mode="selector" range="{{diagAxialOptions}}" value="{{diag_axial_index}}" bindchange="onDiagPickerChange" data-field="axial" data-range="diagAxialOptions">
-                <view class="picker-box sm">{{form.diagnosis_json.axial || '选择'}}</view>
-              </picker>
+          <!-- date 类型：日期选择 -->
+          <view wx:elif="{{field.type === 'date'}}" class="input-item" style="order:{{field.sort_order}}">
+            <ui-picker-field
+              label="{{field.label}}"
+              required="{{field.required}}"
+              mode="date"
+              placeholder="{{field.placeholder || '请选择日期'}}"
+              value="{{formValues[field.key] || ''}}"
+              displayText="{{formValues[field.key] || ''}}"
+              bind:change="onDynamicDateChange"
+              data-field="{{field.key}}"
+            />
+          </view>
+
+          <!-- textarea 类型：多行文本 -->
+          <view wx:elif="{{field.type === 'textarea'}}" class="input-item" style="order:{{field.sort_order}}">
+            <text class="field-label">{{field.label}} <text class="req" wx:if="{{field.required}}">*</text></text>
+            <textarea
+              class="textarea"
+              placeholder="{{field.placeholder || '请输入'}}"
+              value="{{formValues[field.key] || ''}}"
+              bindinput="onDynamicTextarea"
+              data-field="{{field.key}}"
+            />
+          </view>
+
+          <!-- readonly 类型：只读展示 -->
+          <view wx:elif="{{field.type === 'readonly'}}" class="input-item" style="order:{{field.sort_order}}">
+            <view class="admin-readonly" wx:if="{{formValues[field.key]}}">
+              <text class="admin-readonly-title">{{field.label}}</text>
+              <view class="admin-plan">{{formValues[field.key]}}</view>
             </view>
           </view>
-          <view class="col">
-            <view class="input-item">
-              <text class="field-label">角膜曲率</text>
-              <picker mode="selector" range="{{diagCurvatureOptions}}" value="{{diag_curvature_index}}" bindchange="onDiagPickerChange" data-field="curvature" data-range="diagCurvatureOptions">
-                <view class="picker-box sm">{{form.diagnosis_json.curvature || '选择'}}</view>
-              </picker>
-            </view>
-          </view>
-          <view class="col">
-            <view class="input-item">
-              <text class="field-label">轴率比</text>
-              <picker mode="selector" range="{{diagAxialRatioOptions}}" value="{{diag_axial_ratio_index}}" bindchange="onDiagPickerChange" data-field="axial_ratio" data-range="diagAxialRatioOptions">
-                <view class="picker-box sm">{{form.diagnosis_json.axial_ratio || '选择'}}</view>
-              </picker>
-            </view>
-          </view>
-        </view>
-
-        <view class="admin-readonly" wx:if="{{form.management_plan || form.optometrist_name || form.exam_date}}">
-          <text class="admin-readonly-title">管理方案（由专业人员填写）</text>
-          <view class="admin-plan" wx:if="{{form.management_plan}}">{{form.management_plan}}</view>
-          <view class="admin-row" wx:if="{{form.optometrist_name}}">
-            <text class="admin-label">验光师：</text>
-            <text class="admin-value">{{form.optometrist_name}}</text>
-          </view>
-          <view class="admin-row" wx:if="{{form.exam_date}}">
-            <text class="admin-label">检查日期：</text>
-            <text class="admin-value">{{form.exam_date}}</text>
-          </view>
-        </view>
-      </view>
-    </view>
-
-    <!-- ========== 四、中医体质评估 ========== -->
-    <view class="card">
-      <view class="card-header" catchtap="toggleSection" data-key="tcm">
-        <view class="card-title-row">
-          <text class="card-title">四、中医体质评估</text>
-          <text class="card-badge" wx:if="{{form.risk_level}}">{{form.risk_level}}</text>
-        </view>
-        <text class="card-arrow {{sections.tcm ? 'open' : ''}}">▸</text>
-      </view>
-      <view class="card-body {{sections.tcm ? 'show' : 'hide'}}">
-        <view class="sub-label">证候评分</view>
-        <view class="tcm-grid">
-          <view class="tcm-row" wx:for="{{tcmSymptomKeys}}" wx:key="key">
-            <text class="tcm-name">{{item.label}}</text>
-            <view class="sev-row">
-              <view class="sev {{form.tcm_symptoms_json[item.key] === opt ? 'on' : ''}}" wx:for="{{severityOptions}}" wx:for-item="opt" wx:for-index="oi" wx:key="oi" catchtap="onTcmSeverityTap" data-key="{{item.key}}" data-value="{{opt}}">{{opt}}</view>
-            </view>
-          </view>
-        </view>
-        <ui-field label="其他症状" value="{{form.tcm_symptom_other}}" placeholder="如有请填写" bind:change="onFieldChange" data-field="tcm_symptom_other" />
-
-        <view class="sub-label">证型判定（可多选）</view>
-        <view class="pill-row">
-          <view class="pill {{syndromeSelected[item] ? 'on' : ''}}" wx:for="{{syndromeOptions}}" wx:key="*this" catchtap="toggleSyndrome" data-value="{{item}}">
-            <text class="pill-check">{{syndromeSelected[item] ? '✓' : ''}}</text>
-            <text>{{item}}</text>
-          </view>
-        </view>
-        <ui-field label="其他证型" value="{{form.tcm_syndrome_other}}" placeholder="如有请填写" bind:change="onFieldChange" data-field="tcm_syndrome_other" />
-
-        <view class="sub-label">风险等级</view>
-        <view class="input-item">
-          <picker mode="selector" range="{{riskOptions}}" value="{{risk_index}}" bindchange="onRiskChange">
-            <view class="picker-box">{{form.risk_level || '请选择风险等级'}}</view>
-          </picker>
-        </view>
-
-        <view class="sub-label">调理方案（可多选）</view>
-        <view class="pill-row">
-          <view class="pill {{treatmentSelected[item] ? 'on' : ''}}" wx:for="{{treatmentOptions}}" wx:key="*this" catchtap="toggleTreatment" data-value="{{item}}">
-            <text class="pill-check">{{treatmentSelected[item] ? '✓' : ''}}</text>
-            <text>{{item}}</text>
-          </view>
-        </view>
-        <ui-field label="其他方案" value="{{form.treatment_other}}" placeholder="如有请填写" bind:change="onFieldChange" data-field="treatment_other" />
-
-        <view class="admin-readonly" wx:if="{{form.doctor_name}}">
-          <text class="admin-readonly-title">医师信息</text>
-          <view class="admin-row">
-            <text class="admin-label">医师签名：</text>
-            <text class="admin-value">{{form.doctor_name}}</text>
-          </view>
-        </view>
+        </block>
       </view>
     </view>
 

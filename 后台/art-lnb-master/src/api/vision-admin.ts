@@ -661,6 +661,46 @@ export function adminsDelete(params: { admin_id: string }) {
   })
 }
 
+// ——— 档案字段配置 ———
+export function profileFieldConfigGet() {
+  return api.get<{ config: ProfileFieldConfig }>({
+    url: '/api/v1/admin/system-config/profile-fields'
+  })
+}
+
+export function profileFieldConfigUpdate(params: ProfileFieldConfig) {
+  return api.put<{ config: ProfileFieldConfig }>({
+    url: '/api/v1/admin/system-config/profile-fields',
+    params
+  })
+}
+
+export type ProfileFieldType = 'text' | 'number' | 'select' | 'multi_select' | 'date' | 'textarea' | 'readonly'
+
+export interface ProfileFieldItem {
+  key: string
+  label: string
+  type: ProfileFieldType
+  options: string[]
+  placeholder: string
+  enabled: boolean
+  required: boolean
+  sort_order: number
+  readonly?: boolean
+}
+
+export interface ProfileFieldSection {
+  key: string
+  label: string
+  enabled: boolean
+  sort_order: number
+  fields: ProfileFieldItem[]
+}
+
+export interface ProfileFieldConfig {
+  sections: ProfileFieldSection[]
+}
+
 // ——— 操作日志 ———
 export function operationLogsList(params: Record<string, unknown> = {}) {
   return api.get({

@@ -25,7 +25,7 @@ const {
   createCheckupRecord,
   updateCheckupRecord
 } = require('../../services/checkupService')
-const { listActiveBanners, getTermsConfig, trackEvent } = require('../../services/contentService')
+const { listActiveBanners, getTermsConfig, getProfileFieldConfig, trackEvent } = require('../../services/contentService')
 
 /**
  * 获取当前用户资料。
@@ -263,6 +263,10 @@ router.post('/checkups', authMiddleware(USER_TYPES.MOBILE), asyncRoute(createChe
 router.put('/checkups/:id', authMiddleware(USER_TYPES.MOBILE), asyncRoute(updateCheckupHandler))
 router.get('/content/banners', asyncRoute(bannersHandler))
 router.get('/content/terms', asyncRoute(termsHandler))
+router.get('/config/profile-fields', asyncRoute(async (req, res) => {
+  const config = await getProfileFieldConfig()
+  success(res, { config })
+}))
 router.post('/analytics/track', asyncRoute(trackHandler))
 router.use('/', authMiddleware(USER_TYPES.MOBILE), questionnaireRoutes)
 

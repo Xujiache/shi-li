@@ -4,6 +4,53 @@ const { createAppError } = require('../utils/appError')
 const { normalizePagination, safeJsonParse, safeJsonStringify, toBoolean } = require('../utils/helpers')
 
 const TERMS_CONFIG_KEY = 'terms_and_privacy'
+const PROFILE_FIELD_CONFIG_KEY = 'profile_field_config'
+const VALID_FIELD_TYPES = ['text', 'number', 'select', 'multi_select', 'date', 'textarea', 'readonly']
+
+const DEFAULT_PROFILE_FIELD_CONFIG = {
+  sections: [
+    {
+      key: 'vision', label: '视力检查', enabled: true, sort_order: 1,
+      fields: [
+        { key: 'vision_r', label: '右眼裸眼视力', type: 'number', placeholder: '如：4.8', options: [], enabled: true, required: false, sort_order: 1 },
+        { key: 'vision_l', label: '左眼裸眼视力', type: 'number', placeholder: '如：5.0', options: [], enabled: true, required: false, sort_order: 2 },
+        { key: 'vision_both', label: '双眼裸眼视力', type: 'number', placeholder: '如：5.0', options: [], enabled: true, required: false, sort_order: 3 },
+        { key: 'refraction_r_detail', label: '右眼屈光度', type: 'text', placeholder: 'S/C/A', options: [], enabled: true, required: false, sort_order: 4 },
+        { key: 'refraction_l_detail', label: '左眼屈光度', type: 'text', placeholder: 'S/C/A', options: [], enabled: true, required: false, sort_order: 5 },
+        { key: 'curvature_r', label: '右眼曲率', type: 'text', placeholder: '', options: [], enabled: true, required: false, sort_order: 6 },
+        { key: 'curvature_l', label: '左眼曲率', type: 'text', placeholder: '', options: [], enabled: true, required: false, sort_order: 7 },
+        { key: 'axial_length_r', label: '右眼眼轴长度', type: 'text', placeholder: '', options: [], enabled: true, required: false, sort_order: 8 },
+        { key: 'axial_length_l', label: '左眼眼轴长度', type: 'text', placeholder: '', options: [], enabled: true, required: false, sort_order: 9 }
+      ]
+    },
+    {
+      key: 'diagnosis', label: '视光诊断', enabled: true, sort_order: 2,
+      fields: [
+        { key: 'diagnosis_vision', label: '视力诊断', type: 'select', placeholder: '请选择', options: ['正常', '不正常'], enabled: true, required: false, sort_order: 1 },
+        { key: 'diagnosis_refraction', label: '屈光诊断', type: 'multi_select', placeholder: '', options: ['正常', '近视', '散光', '弱视', '原始储备低'], enabled: true, required: false, sort_order: 2 },
+        { key: 'diagnosis_axial', label: '眼轴诊断', type: 'select', placeholder: '请选择', options: ['正常', '眼轴长', '眼轴短'], enabled: true, required: false, sort_order: 3 },
+        { key: 'diagnosis_curvature', label: '曲率诊断', type: 'select', placeholder: '请选择', options: ['正常', '曲率陡', '曲率平'], enabled: true, required: false, sort_order: 4 },
+        { key: 'diagnosis_axial_ratio', label: '眼轴/曲率比', type: 'select', placeholder: '请选择', options: ['3.0', '＞3.1', '＞3.3'], enabled: true, required: false, sort_order: 5 },
+        { key: 'management_plan', label: '管理方案', type: 'textarea', placeholder: '', options: [], enabled: true, required: false, sort_order: 6, readonly: true },
+        { key: 'optometrist_name', label: '验光师', type: 'text', placeholder: '', options: [], enabled: true, required: false, sort_order: 7, readonly: true },
+        { key: 'exam_date', label: '检查日期', type: 'date', placeholder: '请选择日期', options: [], enabled: true, required: false, sort_order: 8, readonly: true }
+      ]
+    },
+    {
+      key: 'tcm', label: '中医体质评估', enabled: true, sort_order: 3,
+      fields: [
+        { key: 'tcm_symptoms', label: '中医症状评估', type: 'multi_select', placeholder: '', options: ['眼干易疲劳', '视物昏花', '夜视力差', '腰酸腿软', '睡眠差多梦', '乏力注意力差', '面色少华', '舌质淡/少苔', '脉细弱'], enabled: true, required: false, sort_order: 1 },
+        { key: 'tcm_symptom_other', label: '其他症状', type: 'text', placeholder: '如有请填写', options: [], enabled: true, required: false, sort_order: 2 },
+        { key: 'tcm_syndrome_types', label: '中医辨证分型', type: 'multi_select', placeholder: '', options: ['肝肾亏虚证', '肾精不足证', '肝血不足证', '脾气虚弱证', '心脾两虚证'], enabled: true, required: false, sort_order: 3 },
+        { key: 'tcm_syndrome_other', label: '其他辨证', type: 'text', placeholder: '如有请填写', options: [], enabled: true, required: false, sort_order: 4 },
+        { key: 'risk_level', label: '风险等级', type: 'select', placeholder: '请选择风险等级', options: ['低危', '中危', '高危（眼轴快涨型）'], enabled: true, required: false, sort_order: 5 },
+        { key: 'treatment_plans', label: '治疗方案', type: 'multi_select', placeholder: '', options: ['补肾填精固轴', '养肝血明目', '健脾益气升清', '综合干预（中药+外治+训练）'], enabled: true, required: false, sort_order: 6 },
+        { key: 'treatment_other', label: '其他治疗方案', type: 'text', placeholder: '如有请填写', options: [], enabled: true, required: false, sort_order: 7 },
+        { key: 'doctor_name', label: '医师', type: 'text', placeholder: '', options: [], enabled: true, required: false, sort_order: 8, readonly: true }
+      ]
+    }
+  ]
+}
 
 /**
  * 规范化轮播图对象。
@@ -222,6 +269,64 @@ async function trackEvent(payload) {
   }
 }
 
+async function getProfileFieldConfig() {
+  const row = await queryOne(
+    'SELECT config_value FROM system_configs WHERE config_key = ? LIMIT 1',
+    [PROFILE_FIELD_CONFIG_KEY]
+  )
+  return safeJsonParse(row ? row.config_value : null, DEFAULT_PROFILE_FIELD_CONFIG)
+}
+
+async function updateProfileFieldConfig(config) {
+  if (!config || !Array.isArray(config.sections)) {
+    throw createAppError('配置格式不正确', StatusCodes.BAD_REQUEST)
+  }
+
+  const sanitized = {
+    sections: config.sections.map((section) => ({
+      key: String(section.key || ''),
+      label: String(section.label || ''),
+      enabled: section.enabled !== false,
+      sort_order: Number(section.sort_order || 0),
+      fields: Array.isArray(section.fields)
+        ? section.fields.map((f) => {
+            const fieldType = VALID_FIELD_TYPES.includes(f.type) ? f.type : 'text'
+            const options = Array.isArray(f.options) ? f.options.map((o) => String(o || '').trim()).filter(Boolean) : []
+            return {
+              key: String(f.key || ''),
+              label: String(f.label || ''),
+              type: fieldType,
+              options,
+              placeholder: String(f.placeholder || ''),
+              enabled: f.enabled !== false,
+              required: f.readonly ? false : f.required === true,
+              sort_order: Number(f.sort_order || 0),
+              ...(f.readonly ? { readonly: true } : {})
+            }
+          })
+        : []
+    }))
+  }
+
+  const existing = await queryOne(
+    'SELECT id FROM system_configs WHERE config_key = ? LIMIT 1',
+    [PROFILE_FIELD_CONFIG_KEY]
+  )
+  if (existing) {
+    await execute(
+      'UPDATE system_configs SET config_value = ?, updated_at = NOW() WHERE id = ?',
+      [safeJsonStringify(sanitized), existing.id]
+    )
+  } else {
+    await execute(
+      'INSERT INTO system_configs (config_key, config_value) VALUES (?, ?)',
+      [PROFILE_FIELD_CONFIG_KEY, safeJsonStringify(sanitized)]
+    )
+  }
+
+  return sanitized
+}
+
 module.exports = {
   normalizeBanner,
   listBanners,
@@ -232,5 +337,7 @@ module.exports = {
   deleteBanner,
   getTermsConfig,
   updateTermsConfig,
+  getProfileFieldConfig,
+  updateProfileFieldConfig,
   trackEvent
 }

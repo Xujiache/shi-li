@@ -117,7 +117,7 @@ Page({
 
   syncTheme() {
     try {
-      const info = wx.getSystemInfoSync()
+      const info = wx.getAppBaseInfo()
       const theme = info && info.theme ? info.theme : 'light'
       this.setData({ theme })
       this.updateLogoutIcon()

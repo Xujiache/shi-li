@@ -153,6 +153,8 @@ ui-field, ui-picker-field { display: block; margin-bottom: 14rpx; }
 }
 
 /* ── Footer ── */
+.cfg-body { display: flex; flex-direction: column; }
+.cfg-body > view { width: 100%; }
 .footer { margin-top: 12rpx; }
 .btn-primary {
   width: 100%; background: var(--primary-100,#0077c2); color: #fff;

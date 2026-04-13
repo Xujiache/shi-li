@@ -1,4 +1,6 @@
 {
+  "miniprogramRoot": "最终（视力）/miniprogram/",
+  "cloudfunctionRoot": "最终（视力）/cloudfunctions/",
   "setting": {
     "es6": true,
     "postcss": true,
@@ -12,7 +14,16 @@
       "outputPath": ""
     },
     "useCompilerPlugins": false,
-    "minifyWXML": true
+    "minifyWXML": true,
+    "compileWorklet": false,
+    "uploadWithSourceMap": true,
+    "packNpmManually": false,
+    "minifyWXSS": true,
+    "localPlugins": false,
+    "disableUseStrict": false,
+    "condition": false,
+    "swc": false,
+    "disableSWC": true
   },
   "compileType": "miniprogram",
   "simulatorPluginLibVersion": {},
@@ -21,5 +32,6 @@
     "include": []
   },
   "appid": "wx7c10749fc36aed93",
-  "editorSetting": {}
+  "editorSetting": {},
+  "libVersion": "3.15.0"
 }
