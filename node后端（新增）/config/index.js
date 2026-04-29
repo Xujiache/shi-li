@@ -51,7 +51,23 @@ module.exports = {
   jwt: {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
     mobileSecret: process.env.JWT_MOBILE_SECRET || process.env.JWT_SECRET || 'mobile-dev-secret',
-    adminSecret: process.env.JWT_ADMIN_SECRET || process.env.JWT_SECRET || 'admin-dev-secret'
+    adminSecret: process.env.JWT_ADMIN_SECRET || process.env.JWT_SECRET || 'admin-dev-secret',
+    employeeSecret: process.env.JWT_EMPLOYEE_SECRET || process.env.JWT_SECRET || 'employee-dev-secret',
+    employeeExpiresIn: process.env.JWT_EMPLOYEE_EXPIRES_IN || '7d'
+  },
+  employee: {
+    loginFailLockMinutes: toInt(process.env.EMPLOYEE_LOGIN_FAIL_LOCK_MINUTES, 15),
+    loginFailThreshold: toInt(process.env.EMPLOYEE_LOGIN_FAIL_THRESHOLD, 5),
+    syncBatchMax: toInt(process.env.EMPLOYEE_SYNC_BATCH_MAX, 200),
+    singleDevice: toBoolean(process.env.EMPLOYEE_SINGLE_DEVICE, true),
+    defaultPassword: process.env.EMPLOYEE_DEFAULT_PASSWORD || 'Init@2025'
+  },
+  sms: {
+    provider: process.env.SMS_PROVIDER || '',
+    apiKey: process.env.SMS_API_KEY || '',
+    apiSecret: process.env.SMS_API_SECRET || '',
+    signName: process.env.SMS_SIGN_NAME || '',
+    loginTemplate: process.env.SMS_TEMPLATE_LOGIN || ''
   },
   upload: {
     rootDir: process.env.UPLOAD_ROOT_DIR
@@ -63,5 +79,11 @@ module.exports = {
   wechat: {
     appId: process.env.WECHAT_APP_ID || '',
     appSecret: process.env.WECHAT_APP_SECRET || ''
+  },
+  ai: {
+    base: process.env.AI_API_BASE || '',
+    apiKey: process.env.AI_API_KEY || '',
+    defaultModel: process.env.AI_DEFAULT_MODEL || 'gpt-4o-mini',
+    timeoutMs: toInt(process.env.AI_TIMEOUT_MS, 30000)
   }
 }

@@ -2,6 +2,10 @@ const express = require('express')
 const router = express.Router()
 const authRoutes = require('./auth')
 const questionnaireRoutes = require('./questionnaire')
+const customerRoutes = require('./customers')
+const childGrantsRoutes = require('./childGrants')
+const aiAnalysisRoutes = require('./aiAnalysis')
+const adminFollowUpsRoutes = require('./followUps')
 const { authMiddleware, USER_TYPES } = require('../../utils/jwt')
 const { success } = require('../../utils/response')
 const { asyncRoute } = require('../../utils/asyncRoute')
@@ -75,6 +79,23 @@ const {
   deleteCheckupRecord
 } = require('../../services/checkupService')
 const { getDashboardStats } = require('../../services/dashboardService')
+const {
+  listEmployees,
+  getEmployeeDetail,
+  createEmployee,
+  updateEmployee,
+  setEmployeeActive,
+  resetEmployeePassword,
+  deleteEmployee: deleteEmployeeService
+} = require('../../services/employeeService')
+const {
+  listDepartments,
+  getDepartmentDetail,
+  createDepartment,
+  updateDepartment,
+  deleteDepartment: deleteDepartmentService,
+  safeDepartment
+} = require('../../services/departmentService')
 
 /**
  * 获取用户列表。
@@ -662,6 +683,63 @@ router.post('/school-classes', isSuperAdmin, logAdminAction('create', 'school_cl
 router.put('/school-classes/:id', isSuperAdmin, logAdminAction('update', 'school_class'), asyncRoute(updateSchoolClassHandler))
 router.delete('/school-classes/:id', isSuperAdmin, logAdminAction('delete', 'school_class'), asyncRoute(deleteSchoolClassHandler))
 
+// ===== 员工管理 =====
+router.get('/employees', asyncRoute(async (req, res) => {
+  const result = await listEmployees(req.query)
+  success(res, result)
+}))
+router.get('/employees/:id', asyncRoute(async (req, res) => {
+  const employee = await getEmployeeDetail(req.params.id)
+  success(res, { employee })
+}))
+router.post('/employees', isSuperAdmin, logAdminAction('create', 'employee'), asyncRoute(async (req, res) => {
+  const hasPassword = req.body && req.body.password !== undefined && req.body.password !== null && String(req.body.password).length > 0
+  const employee = await createEmployee(req.body || {})
+  const payload = { employee }
+  if (!hasPassword) {
+    payload.default_password = 'Init@2025'
+  }
+  success(res, payload, '创建成功')
+}))
+router.put('/employees/:id', isSuperAdmin, logAdminAction('update', 'employee'), asyncRoute(async (req, res) => {
+  const employee = await updateEmployee(req.params.id, req.body || {})
+  success(res, { employee }, '更新成功')
+}))
+router.put('/employees/:id/status', isSuperAdmin, logAdminAction('update', 'employee'), asyncRoute(async (req, res) => {
+  const employee = await setEmployeeActive(req.params.id, req.body.active)
+  success(res, { employee }, '更新成功')
+}))
+router.put('/employees/:id/reset-password', isSuperAdmin, logAdminAction('update', 'employee'), asyncRoute(async (req, res) => {
+  const result = await resetEmployeePassword(req.params.id, req.body && req.body.password)
+  success(res, result, '重置成功')
+}))
+router.delete('/employees/:id', isSuperAdmin, logAdminAction('delete', 'employee'), asyncRoute(async (req, res) => {
+  await deleteEmployeeService(req.params.id)
+  success(res, null, '删除成功')
+}))
+
+// ===== 部门管理 =====
+router.get('/departments', asyncRoute(async (req, res) => {
+  const result = await listDepartments(req.query)
+  success(res, result)
+}))
+router.get('/departments/:id', asyncRoute(async (req, res) => {
+  const department = await getDepartmentDetail(req.params.id)
+  success(res, { department })
+}))
+router.post('/departments', isSuperAdmin, logAdminAction('create', 'department'), asyncRoute(async (req, res) => {
+  const department = await createDepartment(req.body || {})
+  success(res, { department }, '创建成功')
+}))
+router.put('/departments/:id', isSuperAdmin, logAdminAction('update', 'department'), asyncRoute(async (req, res) => {
+  const department = await updateDepartment(req.params.id, req.body || {})
+  success(res, { department }, '更新成功')
+}))
+router.delete('/departments/:id', isSuperAdmin, logAdminAction('delete', 'department'), asyncRoute(async (req, res) => {
+  await deleteDepartmentService(req.params.id)
+  success(res, null, '删除成功')
+}))
+
 // ===== 轮播图 =====
 router.get('/banners', asyncRoute(bannersListHandler))
 router.get('/banners/:id', asyncRoute(bannerDetailHandler))
@@ -708,6 +786,18 @@ router.put('/system-config/profile-fields', isSuperAdmin, logAdminAction('update
   const config = await updateProfileFieldConfig(req.body || {})
   success(res, { config }, '保存成功')
 }))
+
+// ===== 员工客户管理（CRM 全局视图 + 导出 + 变更通知）=====
+router.use('/customers', customerRoutes)
+
+// ===== 孩子档案：部门字段组授权 + 孩子归属（路径混合 dept-field-grants 和 children/:id/assignments）=====
+router.use('/', childGrantsRoutes)
+
+// ===== AI 分析：配置 + 孩子分析历史 + 触发生成（路径混合 ai-analysis/* 和 children/:id/analyses）=====
+router.use('/', aiAnalysisRoutes)
+
+// ===== 全局跟进日志（超级管理员看所有员工跟进） =====
+router.use('/follow-ups', adminFollowUpsRoutes)
 
 // ===== 问卷 =====
 router.use('/', questionnaireRoutes)

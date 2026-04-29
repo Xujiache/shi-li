@@ -1,0 +1,179 @@
+{
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^([a-zA-Z][\\w-]*)$": "@/components/$1.vue"
+    }
+  },
+  "pages": [
+    {
+      "path": "pages/login/login",
+      "style": {
+        "navigationBarTitleText": "登录",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/login/change-password",
+      "style": {
+        "navigationBarTitleText": "修改密码"
+      }
+    },
+    {
+      "path": "pages/login/verify",
+      "style": {
+        "navigationBarTitleText": "异地登录验证"
+      }
+    },
+    {
+      "path": "pages/home/index",
+      "style": {
+        "navigationBarTitleText": "工作台",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/customer/list",
+      "style": {
+        "navigationBarTitleText": "我的客户",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/customer/detail",
+      "style": {
+        "navigationBarTitleText": "客户详情"
+      }
+    },
+    {
+      "path": "pages/customer/new",
+      "style": {
+        "navigationBarTitleText": "新建客户"
+      }
+    },
+    {
+      "path": "pages/customer/edit",
+      "style": {
+        "navigationBarTitleText": "编辑客户"
+      }
+    },
+    {
+      "path": "pages/customer/search",
+      "style": {
+        "navigationBarTitleText": "搜索客户"
+      }
+    },
+    {
+      "path": "pages/customer/conflict",
+      "style": {
+        "navigationBarTitleText": "冲突合并"
+      }
+    },
+    {
+      "path": "pages/follow-up/list",
+      "style": {
+        "navigationBarTitleText": "跟进日志",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/follow-up/new",
+      "style": {
+        "navigationBarTitleText": "写跟进"
+      }
+    },
+    {
+      "path": "pages/follow-up/detail",
+      "style": {
+        "navigationBarTitleText": "跟进详情"
+      }
+    },
+    {
+      "path": "pages/transfer/new",
+      "style": {
+        "navigationBarTitleText": "提交转出"
+      }
+    },
+    {
+      "path": "pages/transfer/mine",
+      "style": {
+        "navigationBarTitleText": "我的转出"
+      }
+    },
+    {
+      "path": "pages/transfer/pending",
+      "style": {
+        "navigationBarTitleText": "待审批"
+      }
+    },
+    {
+      "path": "pages/notification/list",
+      "style": {
+        "navigationBarTitleText": "消息中心",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/notification/detail",
+      "style": {
+        "navigationBarTitleText": "消息详情"
+      }
+    },
+    {
+      "path": "pages/me/index",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
+    },
+    {
+      "path": "pages/me/profile",
+      "style": {
+        "navigationBarTitleText": "个人信息"
+      }
+    },
+    {
+      "path": "pages/me/team",
+      "style": {
+        "navigationBarTitleText": "我的团队"
+      }
+    },
+    {
+      "path": "pages/me/stats",
+      "style": {
+        "navigationBarTitleText": "数据统计"
+      }
+    },
+    {
+      "path": "pages/me/settings",
+      "style": {
+        "navigationBarTitleText": "设置"
+      }
+    },
+    {
+      "path": "pages/me/sync-status",
+      "style": {
+        "navigationBarTitleText": "同步状态"
+      }
+    },
+    {
+      "path": "pages/child/list",
+      "style": {
+        "navigationBarTitleText": "孩子档案",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/child/detail",
+      "style": {
+        "navigationBarTitleText": "档案详情"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "视力员工",
+    "navigationBarBackgroundColor": "#1677FF",
+    "backgroundColor": "#F5F7FA"
+  },
+  "_tabBarReplaced": "原生 tabBar 已替换为悬浮自定义组件 components/floating-tabbar.vue（在 5 个 tab 页面底部插入），不再使用 pages.json tabBar 配置。"
+}

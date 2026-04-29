@@ -4,6 +4,7 @@ const logger = require('./utils/logger')
 const { testConnection } = require('./utils/db')
 const { connectRedis } = require('./utils/redis')
 const { checkAndReleasePort } = require('./utils/portCheck')
+const followUpReminder = require('./jobs/followUpReminder')
 
 /**
  * 启动 HTTP 服务。
@@ -28,6 +29,12 @@ async function startServer() {
     app.listen(config.server.port, config.server.host, () => {
       logger.info(`服务器在 ${config.server.host}:${config.server.port} 启动成功 (${config.server.env}模式)`)
       logger.info(`API基地址: ${config.server.publicUrl}`)
+      // 启动跟进提醒定时任务（每分钟扫一次 customers.next_follow_up_at）
+      try {
+        followUpReminder.start()
+      } catch (err) {
+        logger.error(`followUpReminder 启动失败: ${err && err.message}`)
+      }
     })
   } catch (error) {
     logger.error(`服务器启动失败: ${error.message}`)

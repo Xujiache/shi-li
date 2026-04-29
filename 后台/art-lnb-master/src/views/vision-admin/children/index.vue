@@ -152,19 +152,131 @@
         <ElButton type="primary" :loading="submitting" @click="submit">确定</ElButton>
       </template>
     </ElDialog>
+
+    <!-- 分配部门 Drawer -->
+    <ElDrawer
+      v-model="assignVisible"
+      :title="assignTitle"
+      size="420px"
+      destroy-on-close
+    >
+      <div style="padding: 16px;">
+        <div style="margin-bottom: 12px; color: #606266; font-size: 13px;">
+          勾选可访问该孩子档案的部门。员工只看到本部门授权的字段组。
+        </div>
+        <ElCheckboxGroup v-model="assignSelected">
+          <div v-for="d in assignDepts" :key="d.id" style="margin-bottom: 12px;">
+            <ElCheckbox :label="d.id" :value="d.id">
+              {{ d.name }}
+            </ElCheckbox>
+          </div>
+        </ElCheckboxGroup>
+      </div>
+      <template #footer>
+        <ElButton @click="assignVisible = false">取消</ElButton>
+        <ElButton type="primary" :loading="assignSaving" @click="confirmAssign">保存</ElButton>
+      </template>
+    </ElDrawer>
+
+    <!-- AI 分析 Drawer -->
+    <ElDrawer
+      v-model="analysisVisible"
+      :title="analysisTitle"
+      size="640px"
+      destroy-on-close
+    >
+      <div style="padding: 16px;">
+        <ElAlert
+          v-if="analysisMode"
+          :type="analysisMode === 'ai' ? 'warning' : 'info'"
+          :closable="false"
+          show-icon
+          :title="analysisMode === 'ai' ? '当前为 AI 模式：家长 / 员工 / 后台展示自动生成内容' : '当前为人工模式：家长 / 员工看人工写的最新一条'"
+          style="margin-bottom: 16px;"
+        />
+
+        <div style="display:flex; gap:8px; margin-bottom:16px;">
+          <ElButton type="primary" @click="onWriteHuman">写人工分析</ElButton>
+          <ElButton type="warning" :loading="generating" @click="onGenerateAi">立即用 AI 生成</ElButton>
+          <ElButton @click="loadAnalyses">刷新</ElButton>
+        </div>
+
+        <ElEmpty v-if="!analysisList.length" description="暂无分析" />
+        <div v-else>
+          <div
+            v-for="a in analysisList"
+            :key="a.id"
+            class="analysis-item"
+            :class="{ inactive: !a.active }"
+          >
+            <div class="ai-head">
+              <ElTag
+                :type="a.source === 'ai' ? 'warning' : 'success'"
+                size="small"
+              >
+                {{ a.source === 'ai' ? 'AI' : '人工' }}
+              </ElTag>
+              <span class="ai-time">{{ a.created_at }}</span>
+              <span v-if="a.model" class="ai-model">{{ a.model }}{{ a.tokens_used ? ` · ${a.tokens_used} tokens` : '' }}</span>
+              <span v-if="!a.active" class="ai-tag-muted">已撤回</span>
+              <span style="flex:1"></span>
+              <ElButton
+                v-if="a.active"
+                size="small"
+                link
+                type="danger"
+                @click="onDeactivate(a.id)"
+              >撤回</ElButton>
+            </div>
+            <div class="ai-content">{{ a.content }}</div>
+          </div>
+        </div>
+      </div>
+    </ElDrawer>
+
+    <!-- 写人工分析 Dialog -->
+    <ElDialog
+      v-model="writeVisible"
+      title="写一条人工分析"
+      width="640px"
+      destroy-on-close
+    >
+      <ElInput
+        v-model="writeContent"
+        type="textarea"
+        :rows="10"
+        placeholder="请输入分析内容（AI 模式下会作为 GPT 模仿的风格范例）"
+        maxlength="5000"
+        show-word-limit
+      />
+      <template #footer>
+        <ElButton @click="writeVisible = false">取消</ElButton>
+        <ElButton type="primary" :loading="writeSaving" @click="confirmWrite">保存</ElButton>
+      </template>
+    </ElDialog>
   </div>
 </template>
 
 <script setup lang="ts">
-  import { h, onMounted } from 'vue'
+  import { h, ref, computed, onMounted } from 'vue'
   import ArtButtonTable from '@/components/core/forms/art-button-table/index.vue'
   import { useTable } from '@/hooks/core/useTable'
   import {
     childrenList, childrenCreate, childrenUpdate, childrenDelete,
     schoolClassesList, profileFieldConfigGet,
-    type ProfileFieldSection
+    departmentsList,
+    adminListChildAssignments, adminSetChildAssignments,
+    adminListChildAnalyses, adminCreateChildAnalysis,
+    adminGenerateChildAnalysis, adminDeactivateAnalysis,
+    type ProfileFieldSection,
+    type DepartmentRow,
+    type ChildAnalysisRow
   } from '@/api/vision-admin'
-  import { ElMessageBox, ElMessage } from 'element-plus'
+  import {
+    ElMessageBox, ElMessage,
+    ElDrawer, ElCheckboxGroup, ElCheckbox, ElButton,
+    ElDialog, ElInput, ElAlert, ElEmpty, ElTag
+  } from 'element-plus'
   import type { FormInstance, FormRules } from 'element-plus'
 
   defineOptions({ name: 'VisionAdminChildren' })
@@ -336,11 +448,29 @@
         {
           prop: 'operation',
           label: '操作',
-          width: 120,
+          width: 280,
           fixed: 'right',
           formatter: (row: Record<string, unknown>) =>
-            h('div', { class: 'flex gap-1' }, [
+            h('div', { class: 'flex gap-1', style: 'align-items:center' }, [
               h(ArtButtonTable, { type: 'edit', onClick: () => openDialog('edit', row) }),
+              h(
+                'span',
+                {
+                  class: 'el-link el-link--primary',
+                  style: 'margin-left:8px;cursor:pointer',
+                  onClick: () => openAssignDialog(row)
+                },
+                () => '分配部门'
+              ),
+              h(
+                'span',
+                {
+                  class: 'el-link el-link--success',
+                  style: 'margin-left:8px;cursor:pointer',
+                  onClick: () => openAnalysisDrawer(row)
+                },
+                () => 'AI 分析'
+              ),
               h(ArtButtonTable, { type: 'delete', onClick: () => del(row as { _id: string }) })
             ])
         }
@@ -455,4 +585,172 @@
     ElMessage.success('已删除')
     refreshData()
   }
+
+  // ===== 分配部门 =====
+  const assignVisible = ref(false)
+  const assignSaving = ref(false)
+  const assignDepts = ref<DepartmentRow[]>([])
+  const assignSelected = ref<number[]>([])
+  const assignTargetId = ref<string | null>(null)
+  const assignTargetName = ref('')
+
+  const assignTitle = computed(() =>
+    assignTargetName.value ? `分配部门 — ${assignTargetName.value}` : '分配部门'
+  )
+
+  async function openAssignDialog(row: Record<string, unknown>) {
+    const childId = String((row?._id as string) || (row?.id as number) || '')
+    if (!childId) return
+    assignTargetId.value = childId
+    assignTargetName.value = String(row?.name || '')
+
+    try {
+      // 并发拉部门列表 + 当前归属
+      const [deptRes, curRes]: [any, any] = await Promise.all([
+        departmentsList({ page: 1, page_size: 200, active: true }),
+        adminListChildAssignments({ child_id: childId })
+      ])
+      assignDepts.value = (deptRes?.list || deptRes?.data?.list || []) as DepartmentRow[]
+      const ids = (curRes?.department_ids || curRes?.data?.department_ids || []) as number[]
+      assignSelected.value = [...ids]
+      assignVisible.value = true
+    } catch (e: any) {
+      ElMessage.error(e?.message || '加载失败')
+    }
+  }
+
+  async function confirmAssign() {
+    if (!assignTargetId.value) return
+    assignSaving.value = true
+    try {
+      await adminSetChildAssignments({
+        child_id: assignTargetId.value,
+        dept_ids: assignSelected.value
+      })
+      ElMessage.success('已保存')
+      assignVisible.value = false
+    } catch (e: any) {
+      ElMessage.error(e?.message || '保存失败')
+    } finally {
+      assignSaving.value = false
+    }
+  }
+
+  // ===== AI 分析 Drawer =====
+  const analysisVisible = ref(false)
+  const analysisTargetId = ref<string | null>(null)
+  const analysisTargetName = ref('')
+  const analysisList = ref<ChildAnalysisRow[]>([])
+  const analysisMode = ref<string>('')
+  const generating = ref(false)
+  const writeVisible = ref(false)
+  const writeContent = ref('')
+  const writeSaving = ref(false)
+
+  const analysisTitle = computed(() =>
+    analysisTargetName.value ? `AI 分析 — ${analysisTargetName.value}` : 'AI 分析'
+  )
+
+  async function openAnalysisDrawer(row: Record<string, unknown>) {
+    const childId = String((row?._id as string) || (row?.id as number) || '')
+    if (!childId) return
+    analysisTargetId.value = childId
+    analysisTargetName.value = String(row?.name || '')
+    analysisVisible.value = true
+    await loadAnalyses()
+  }
+
+  async function loadAnalyses() {
+    if (!analysisTargetId.value) return
+    try {
+      const r: any = await adminListChildAnalyses({ child_id: analysisTargetId.value })
+      const data = r?.data || r
+      analysisMode.value = data?.mode || ''
+      analysisList.value = (data?.list || []) as ChildAnalysisRow[]
+    } catch (e: any) {
+      ElMessage.error(e?.message || '加载失败')
+    }
+  }
+
+  function onWriteHuman() {
+    writeContent.value = ''
+    writeVisible.value = true
+  }
+
+  async function confirmWrite() {
+    if (!analysisTargetId.value) return
+    if (!writeContent.value.trim()) {
+      ElMessage.warning('内容不能为空')
+      return
+    }
+    writeSaving.value = true
+    try {
+      await adminCreateChildAnalysis({
+        child_id: analysisTargetId.value,
+        content: writeContent.value.trim()
+      })
+      ElMessage.success('已保存')
+      writeVisible.value = false
+      await loadAnalyses()
+    } catch (e: any) {
+      ElMessage.error(e?.message || '保存失败')
+    } finally {
+      writeSaving.value = false
+    }
+  }
+
+  async function onGenerateAi() {
+    if (!analysisTargetId.value) return
+    generating.value = true
+    try {
+      ElMessage.info('调用 GPT 中，约 5-15 秒...')
+      await adminGenerateChildAnalysis({ child_id: analysisTargetId.value })
+      ElMessage.success('AI 分析已生成')
+      await loadAnalyses()
+    } catch (e: any) {
+      ElMessage.error(e?.message || 'AI 生成失败')
+    } finally {
+      generating.value = false
+    }
+  }
+
+  async function onDeactivate(id: number) {
+    try {
+      await ElMessageBox.confirm('确定撤回该分析？撤回后家长 / 员工不再展示。', '撤回', { type: 'warning' })
+    } catch { return }
+    try {
+      await adminDeactivateAnalysis({ id })
+      ElMessage.success('已撤回')
+      await loadAnalyses()
+    } catch (e: any) {
+      ElMessage.error(e?.message || '撤回失败')
+    }
+  }
 </script>
+
+<style scoped>
+.analysis-item {
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+.analysis-item.inactive { opacity: 0.5; }
+.ai-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.ai-time { color: #909399; font-size: 12px; }
+.ai-model { color: #c0c4cc; font-size: 12px; }
+.ai-tag-muted { color: #f56c6c; font-size: 12px; }
+.ai-content {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #303133;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+</style>

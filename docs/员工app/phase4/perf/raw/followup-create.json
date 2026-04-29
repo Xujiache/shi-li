@@ -1,0 +1,32 @@
+{
+  "name": "followup-create",
+  "concurrency": 8,
+  "total": 200,
+  "durationMs": 1603,
+  "rps": 124.77,
+  "okCount": 200,
+  "errorCount": 0,
+  "errorRate": 0,
+  "statusBuckets": {
+    "200": 200
+  },
+  "latency": {
+    "p50": 63.08,
+    "p90": 88.17,
+    "p95": 93.35,
+    "p99": 104.05,
+    "min": 24.52,
+    "max": 108.24,
+    "mean": 63.38
+  },
+  "sampleErrors": [],
+  "cleanup": {
+    "matchedBeforeDelete": 205,
+    "remainingAfterDelete": 0
+  },
+  "thresholds": {
+    "p95Ms": 600,
+    "errorRate": 0.02
+  },
+  "passed": true
+}

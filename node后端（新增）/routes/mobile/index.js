@@ -26,6 +26,21 @@ const {
   updateCheckupRecord
 } = require('../../services/checkupService')
 const { listActiveBanners, getTermsConfig, getProfileFieldConfig, trackEvent } = require('../../services/contentService')
+const { findChildById, ensureChildOwnership } = require('../../services/childService')
+const { getDisplayAnalysis } = require('../../services/aiAnalysisService')
+
+/**
+ * 家长查看孩子档案分析（按 admin 配置自动选 human/ai 模式）。
+ */
+async function childAnalysisHandler(req, res) {
+  const child = await findChildById(req.params.id)
+  if (!child) {
+    return success(res, { analysis: null })
+  }
+  ensureChildOwnership(child, req.user.id)
+  const analysis = await getDisplayAnalysis(req.params.id, { allow_generate: true })
+  success(res, { analysis })
+}
 
 /**
  * 获取当前用户资料。
@@ -253,6 +268,7 @@ router.get('/children/school-options', authMiddleware(USER_TYPES.MOBILE), asyncR
 router.post('/children', authMiddleware(USER_TYPES.MOBILE), asyncRoute(createChildHandler))
 router.put('/children/:id', authMiddleware(USER_TYPES.MOBILE), asyncRoute(updateChildHandler))
 router.delete('/children/:id', authMiddleware(USER_TYPES.MOBILE), asyncRoute(deleteChildHandler))
+router.get('/children/:id/analysis', authMiddleware(USER_TYPES.MOBILE), asyncRoute(childAnalysisHandler))
 router.get('/appointments/items', authMiddleware(USER_TYPES.MOBILE), asyncRoute(appointmentItemsHandler))
 router.get('/appointments/schedules', authMiddleware(USER_TYPES.MOBILE), asyncRoute(appointmentSchedulesHandler))
 router.get('/appointments/bookings', authMiddleware(USER_TYPES.MOBILE), asyncRoute(bookingListHandler))

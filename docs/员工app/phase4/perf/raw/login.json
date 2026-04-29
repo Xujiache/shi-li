@@ -1,0 +1,28 @@
+{
+  "name": "login",
+  "concurrency": 10,
+  "total": 200,
+  "durationMs": 4524,
+  "rps": 44.21,
+  "okCount": 200,
+  "errorCount": 0,
+  "errorRate": 0,
+  "statusBuckets": {
+    "200": 200
+  },
+  "latency": {
+    "p50": 218.03,
+    "p90": 257.24,
+    "p95": 264.82,
+    "p99": 281.03,
+    "min": 79.52,
+    "max": 296.89,
+    "mean": 220.96
+  },
+  "sampleErrors": [],
+  "thresholds": {
+    "p95Ms": 1500,
+    "errorRate": 0.05
+  },
+  "passed": true
+}

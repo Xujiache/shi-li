@@ -117,6 +117,26 @@ async function createCoreTables(connection) {
   await runDDL(
     connection,
     `
+      CREATE TABLE IF NOT EXISTS admins (
+        id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+        phone VARCHAR(20) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        display_name VARCHAR(100) NOT NULL DEFAULT '',
+        role VARCHAR(50) NOT NULL DEFAULT 'admin',
+        active TINYINT(1) NOT NULL DEFAULT 1,
+        last_login_at DATETIME DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_admins_phone (phone),
+        KEY idx_admins_role (role),
+        KEY idx_admins_active (active)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `
+  )
+
+  await runDDL(
+    connection,
+    `
       CREATE TABLE IF NOT EXISTS school_classes (
         id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
         school VARCHAR(120) NOT NULL,
@@ -598,6 +618,410 @@ async function createCoreTables(connection) {
   logger.info('儿童视力管理核心业务表与问卷表初始化完成')
 }
 
+/**
+ * 创建员工 App（Phase 1）相关数据表与既有 admin 操作日志补丁表。
+ * 与 createCoreTables 保持解耦，便于后续维护回滚。
+ * @param {import('mysql2/promise').Connection} connection MySQL 连接。
+ * @returns {Promise<void>}
+ */
+async function createEmployeeAppTables(connection) {
+  logger.info('开始初始化员工 App 相关表（Phase 1）...')
+
+  // ===== 1. 历史遗留补丁：admin_operation_logs（既有 adminLog 中间件在写但表从未建过） =====
+  await runDDL(
+    connection,
+    `
+      CREATE TABLE IF NOT EXISTS admin_operation_logs (
+        id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+        admin_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+        admin_phone VARCHAR(20) NOT NULL DEFAULT '',
+        admin_name VARCHAR(100) NOT NULL DEFAULT '',
+        operator_type ENUM('admin','employee') NOT NULL DEFAULT 'admin',
+        action VARCHAR(50) NOT NULL,
+        resource VARCHAR(80) NOT NULL,
+        resource_id VARCHAR(80) DEFAULT NULL,
+        detail JSON DEFAULT NULL,
+        ip VARCHAR(64) NOT NULL DEFAULT '',
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_aol_admin (admin_id, created_at),
+        KEY idx_aol_resource (resource, created_at),
+        KEY idx_aol_operator_type (operator_type, created_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `
+  )
+  // 兼容补丁：若旧库已经有 admin_operation_logs（人工建过）但缺 operator_type 列，则补上
+  await ensureColumn(
+    connection,
+    'admin_operation_logs',
+    'operator_type',
+    `ENUM('admin','employee') NOT NULL DEFAULT 'admin' AFTER admin_name`
+  )
+  await ensureIndex(
+    connection,
+    'admin_operation_logs',
+    'idx_aol_operator_type',
+    'KEY idx_aol_operator_type (operator_type, created_at)'
+  )
+
+  // ===== 2. departments：部门字典 =====
+  await runDDL(
+    connection,
+    `
+      CREATE TABLE IF NOT EXISTS departments (
+        id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(100) NOT NULL,
+        parent_id BIGINT UNSIGNED DEFAULT NULL,
+        manager_id BIGINT UNSIGNED DEFAULT NULL,
+        sort_order INT NOT NULL DEFAULT 0,
+        active TINYINT(1) NOT NULL DEFAULT 1,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_dept_parent (parent_id),
+        KEY idx_dept_active (active)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `
+  )
+
+  // ===== 3. employees：员工账号（与 admins 完全独立） =====
+  await runDDL(
+    connection,
+    `
+      CREATE TABLE IF NOT EXISTS employees (
+        id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+        phone VARCHAR(20) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        display_name VARCHAR(100) NOT NULL DEFAULT '',
+        avatar_url VARCHAR(500) NOT NULL DEFAULT '',
+        role ENUM('staff','manager') NOT NULL DEFAULT 'staff',
+        department_id BIGINT UNSIGNED DEFAULT NULL,
+        position VARCHAR(100) NOT NULL DEFAULT '',
+        active TINYINT(1) NOT NULL DEFAULT 1,
+        must_change_password TINYINT(1) NOT NULL DEFAULT 1,
+        last_login_at DATETIME DEFAULT NULL,
+        last_login_ip VARCHAR(64) DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_employees_phone (phone),
+        KEY idx_employees_dept_role (department_id, role),
+        KEY idx_employees_active (active)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `
+  )
+
+  // ===== 4. employee_sessions：设备会话（单设备登录用） =====
+  await runDDL(
+    connection,
+    `
+      CREATE TABLE IF NOT EXISTS employee_sessions (
+        id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+        employee_id BIGINT UNSIGNED NOT NULL,
+        device_id VARCHAR(64) NOT NULL DEFAULT '',
+        device_info VARCHAR(255) NOT NULL DEFAULT '',
+        ip_addr VARCHAR(64) DEFAULT NULL,
+        token_hash VARCHAR(128) NOT NULL,
+        expires_at DATETIME NOT NULL,
+        revoked TINYINT(1) NOT NULL DEFAULT 0,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_emp_session (employee_id, revoked),
+        KEY idx_session_token (token_hash)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `
+  )
+
+  // ===== 5. customers：客户主表 =====
+  await runDDL(
+    connection,
+    `
+      CREATE TABLE IF NOT EXISTS customers (
+        id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+        customer_no VARCHAR(20) NOT NULL,
+        user_id BIGINT UNSIGNED DEFAULT NULL,
+        display_name VARCHAR(100) NOT NULL,
+        phone VARCHAR(20) NOT NULL DEFAULT '',
+        gender ENUM('male','female','unknown') NOT NULL DEFAULT 'unknown',
+        age INT DEFAULT NULL,
+        school VARCHAR(120) NOT NULL DEFAULT '',
+        class_name VARCHAR(120) NOT NULL DEFAULT '',
+        source ENUM('miniprogram','employee','transferred') NOT NULL DEFAULT 'employee',
+        status ENUM('potential','interested','signed','lost') NOT NULL DEFAULT 'potential',
+        level ENUM('A','B','C') NOT NULL DEFAULT 'C',
+        tags JSON DEFAULT NULL,
+        remark TEXT,
+        assigned_employee_id BIGINT UNSIGNED DEFAULT NULL,
+        next_follow_up_at DATETIME DEFAULT NULL,
+        next_follow_up_text VARCHAR(500) NOT NULL DEFAULT '',
+        reminded_at DATETIME DEFAULT NULL,
+        last_follow_up_at DATETIME DEFAULT NULL,
+        active TINYINT(1) NOT NULL DEFAULT 1,
+        client_uuid VARCHAR(64) DEFAULT NULL,
+        created_by BIGINT UNSIGNED DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_customers_no (customer_no),
+        UNIQUE KEY uk_customers_uuid (client_uuid),
+        KEY idx_customers_assigned (assigned_employee_id, status),
+        KEY idx_customers_phone (phone),
+        KEY idx_customers_user (user_id),
+        KEY idx_customers_next_followup (next_follow_up_at),
+        KEY idx_customers_active (active)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `
+  )
+
+  // ===== 6. customer_attachments：客户附件 =====
+  await runDDL(
+    connection,
+    `
+      CREATE TABLE IF NOT EXISTS customer_attachments (
+        id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+        customer_id BIGINT UNSIGNED NOT NULL,
+        upload_id BIGINT UNSIGNED NOT NULL,
+        file_type ENUM('image','document') NOT NULL DEFAULT 'image',
+        uploaded_by BIGINT UNSIGNED NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_attach_customer (customer_id),
+        KEY idx_attach_upload (upload_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `
+  )
+
+  // ===== 7. follow_ups：跟进日志 =====
+  await runDDL(
+    connection,
+    `
+      CREATE TABLE IF NOT EXISTS follow_ups (
+        id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+        customer_id BIGINT UNSIGNED NOT NULL,
+        employee_id BIGINT UNSIGNED NOT NULL,
+        follow_at DATETIME NOT NULL,
+        type ENUM('phone','wechat','face','other') NOT NULL DEFAULT 'phone',
+        result ENUM('no_progress','interested','follow_up','signed','lost') NOT NULL DEFAULT 'no_progress',
+        content TEXT NOT NULL,
+        attachments JSON DEFAULT NULL,
+        next_follow_up_at DATETIME DEFAULT NULL,
+        client_uuid VARCHAR(64) DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_followups_uuid (client_uuid),
+        KEY idx_fu_customer_time (customer_id, follow_at),
+        KEY idx_fu_employee_time (employee_id, follow_at),
+        KEY idx_fu_type (type),
+        KEY idx_fu_result (result)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `
+  )
+
+  // ===== 8. customer_transfers：客户转出申请 =====
+  await runDDL(
+    connection,
+    `
+      CREATE TABLE IF NOT EXISTS customer_transfers (
+        id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+        customer_id BIGINT UNSIGNED NOT NULL,
+        from_employee_id BIGINT UNSIGNED NOT NULL,
+        to_employee_id BIGINT UNSIGNED DEFAULT NULL,
+        reason TEXT NOT NULL,
+        status ENUM('pending','approved','rejected','cancelled') NOT NULL DEFAULT 'pending',
+        approved_by BIGINT UNSIGNED DEFAULT NULL,
+        approved_at DATETIME DEFAULT NULL,
+        approval_remark VARCHAR(500) NOT NULL DEFAULT '',
+        client_uuid VARCHAR(64) DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_xfer_uuid (client_uuid),
+        KEY idx_xfer_status (status),
+        KEY idx_xfer_from (from_employee_id, status),
+        KEY idx_xfer_customer (customer_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `
+  )
+
+  // ===== 9. notifications：员工消息 =====
+  await runDDL(
+    connection,
+    `
+      CREATE TABLE IF NOT EXISTS notifications (
+        id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+        employee_id BIGINT UNSIGNED NOT NULL,
+        type VARCHAR(64) NOT NULL,
+        title VARCHAR(200) NOT NULL,
+        body VARCHAR(500) NOT NULL DEFAULT '',
+        payload JSON DEFAULT NULL,
+        is_read TINYINT(1) NOT NULL DEFAULT 0,
+        read_at DATETIME DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_notif_emp_unread (employee_id, is_read, created_at),
+        KEY idx_notif_type (type)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `
+  )
+
+  // ===== 10. customer_tags：标签字典 =====
+  await runDDL(
+    connection,
+    `
+      CREATE TABLE IF NOT EXISTS customer_tags (
+        id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(50) NOT NULL,
+        color VARCHAR(20) NOT NULL DEFAULT '#1677FF',
+        sort_order INT NOT NULL DEFAULT 0,
+        active TINYINT(1) NOT NULL DEFAULT 1,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_tag_name (name),
+        KEY idx_tag_sort (sort_order)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `
+  )
+
+  // ===== 11. system_announcements：员工公告 =====
+  await runDDL(
+    connection,
+    `
+      CREATE TABLE IF NOT EXISTS system_announcements (
+        id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+        title VARCHAR(200) NOT NULL,
+        body TEXT NOT NULL,
+        is_top TINYINT(1) NOT NULL DEFAULT 0,
+        must_popup TINYINT(1) NOT NULL DEFAULT 0,
+        publish_at DATETIME DEFAULT NULL,
+        expires_at DATETIME DEFAULT NULL,
+        active TINYINT(1) NOT NULL DEFAULT 1,
+        created_by BIGINT UNSIGNED DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_ann_publish (active, publish_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `
+  )
+
+  // ===== 11.b 旧库兼容迁移：customers.reminded_at（用于 followUpReminder 防重发） =====
+  await ensureColumn(
+    connection,
+    'customers',
+    'reminded_at',
+    "DATETIME DEFAULT NULL AFTER next_follow_up_text"
+  )
+
+  // ===== 11.c dept_field_grants：部门 × 字段组(section_key) 授权 =====
+  await runDDL(
+    connection,
+    `
+      CREATE TABLE IF NOT EXISTS dept_field_grants (
+        id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+        department_id BIGINT UNSIGNED NOT NULL,
+        section_key VARCHAR(64) NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_dept_section (department_id, section_key),
+        KEY idx_dfg_dept (department_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `
+  )
+
+  // ===== 11.d child_dept_assignments：孩子 × 部门 多对多归属 =====
+  await runDDL(
+    connection,
+    `
+      CREATE TABLE IF NOT EXISTS child_dept_assignments (
+        id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+        child_id BIGINT UNSIGNED NOT NULL,
+        department_id BIGINT UNSIGNED NOT NULL,
+        assigned_by BIGINT UNSIGNED DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_child_dept (child_id, department_id),
+        KEY idx_cda_child (child_id),
+        KEY idx_cda_dept (department_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `
+  )
+
+  // ===== 11.e child_ai_analysis：孩子档案分析（人工 / AI 来源），多条历史 + 软删 =====
+  await runDDL(
+    connection,
+    `
+      CREATE TABLE IF NOT EXISTS child_ai_analysis (
+        id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+        child_id BIGINT UNSIGNED NOT NULL,
+        source ENUM('human','ai') NOT NULL,
+        content TEXT NOT NULL,
+        model VARCHAR(64) DEFAULT NULL,
+        prompt_meta JSON DEFAULT NULL,
+        tokens_used INT DEFAULT NULL,
+        created_by_employee_id BIGINT UNSIGNED DEFAULT NULL,
+        created_by_admin_id BIGINT UNSIGNED DEFAULT NULL,
+        active TINYINT(1) NOT NULL DEFAULT 1,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_caa_child_active_id (child_id, active, id),
+        KEY idx_caa_source (source)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `
+  )
+
+  // ===== 11.f ai_style_pack：人工分析风格知识包（蒸馏后版本化存储） =====
+  await runDDL(
+    connection,
+    `
+      CREATE TABLE IF NOT EXISTS ai_style_pack (
+        id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+        version INT NOT NULL,
+        based_on_count INT NOT NULL DEFAULT 0,
+        based_on_max_human_id BIGINT UNSIGNED DEFAULT NULL,
+        content TEXT NOT NULL,
+        model VARCHAR(64) DEFAULT NULL,
+        tokens_used INT DEFAULT NULL,
+        active TINYINT(1) NOT NULL DEFAULT 1,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_asp_version (version),
+        KEY idx_asp_active (active, id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `
+  )
+
+  // ===== 11.f ai_analysis_corrections：AI 报告修订与反馈闭环 =====
+  await runDDL(
+    connection,
+    `
+      CREATE TABLE IF NOT EXISTS ai_analysis_corrections (
+        id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+        child_id BIGINT UNSIGNED NOT NULL,
+        original_analysis_id BIGINT UNSIGNED NOT NULL,
+        corrected_analysis_id BIGINT UNSIGNED NOT NULL,
+        original_content TEXT NOT NULL,
+        corrected_content TEXT NOT NULL,
+        question_prompt VARCHAR(120) DEFAULT NULL,
+        question_summary VARCHAR(300) DEFAULT NULL,
+        generated_options JSON DEFAULT NULL,
+        selected_options JSON DEFAULT NULL,
+        custom_reason TEXT DEFAULT NULL,
+        created_by_employee_id BIGINT UNSIGNED DEFAULT NULL,
+        created_by_admin_id BIGINT UNSIGNED DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_aic_child_id (child_id, id),
+        KEY idx_aic_original_id (original_analysis_id),
+        KEY idx_aic_corrected_id (corrected_analysis_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `
+  )
+
+  // ===== 12. 默认部门 + 默认标签种子 =====
+  await connection.query(
+    `INSERT IGNORE INTO departments (id, name, parent_id, sort_order, active) VALUES (1, '默认部门', NULL, 0, 1)`
+  )
+  await connection.query(
+    `INSERT IGNORE INTO customer_tags (name, color, sort_order, active) VALUES
+      ('A级', '#FF4D4F', 1, 1),
+      ('B级', '#FAAD14', 2, 1),
+      ('C级', '#52C41A', 3, 1),
+      ('急客', '#1677FF', 4, 1),
+      ('续约', '#13C2C2', 5, 1)
+    `
+  )
+
+  logger.info('员工 App 相关表（Phase 1）初始化完成')
+}
+
 module.exports = {
-  createCoreTables
+  createCoreTables,
+  createEmployeeAppTables
 }

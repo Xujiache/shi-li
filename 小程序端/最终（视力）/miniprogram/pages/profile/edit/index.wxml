@@ -165,6 +165,24 @@
       </view>
     </view>
 
+    <!-- 档案分析（AI / 人工） -->
+    <view class="analysis-card" wx:if="{{childId}}">
+      <view class="analysis-title">📋 档案分析</view>
+      <view class="analysis-loading" wx:if="{{analysisLoading}}">加载中…</view>
+      <block wx:elif="{{analysis}}">
+        <view class="analysis-head">
+          <view class="analysis-tag {{analysis.source === 'ai' ? 'tag-ai' : 'tag-human'}}">
+            {{analysis.source === 'ai' ? 'AI 分析' : '人工分析'}}
+          </view>
+          <text class="analysis-time">{{analysis.created_at}}</text>
+        </view>
+        <view class="analysis-content">{{analysis.content}}</view>
+      </block>
+      <view wx:else class="analysis-empty">
+        暂无分析（管理员尚未生成）
+      </view>
+    </view>
+
     <view class="footer">
       <button class="btn-primary" form-type="submit" disabled="{{!canSubmit}}">提交档案</button>
       <view class="footer-tip" wx:if="{{!canSubmit}}">请完善姓名、性别、出生日期、学校、班级后提交</view>

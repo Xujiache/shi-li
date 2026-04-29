@@ -23,6 +23,39 @@ export const visionAdminRoutes: AppRouteRecord = {
       }
     },
     {
+      path: 'employees',
+      name: 'VisionAdminEmployees',
+      component: '/vision-admin/employees/index',
+      meta: {
+        title: '员工管理',
+        icon: 'ri:user-star-line',
+        keepAlive: true,
+        roles: ['R_SUPER', 'R_ADMIN']
+      }
+    },
+    {
+      path: 'customers',
+      name: 'VisionAdminCustomers',
+      component: '/vision-admin/customers/index',
+      meta: {
+        title: '员工客户管理',
+        icon: 'ri:contacts-book-line',
+        keepAlive: true,
+        roles: ['R_SUPER', 'R_ADMIN']
+      }
+    },
+    {
+      path: 'departments',
+      name: 'VisionAdminDepartments',
+      component: '/vision-admin/departments/index',
+      meta: {
+        title: '部门管理',
+        icon: 'ri:building-line',
+        keepAlive: true,
+        roles: ['R_SUPER', 'R_ADMIN']
+      }
+    },
+    {
       path: 'users',
       name: 'VisionAdminUsers',
       component: '/vision-admin/users/index',
@@ -106,6 +139,39 @@ export const visionAdminRoutes: AppRouteRecord = {
       meta: {
         title: '档案字段配置',
         icon: 'ri:settings-3-line',
+        keepAlive: true,
+        roles: ['R_SUPER', 'R_ADMIN']
+      }
+    },
+    {
+      path: 'dept-grants',
+      name: 'VisionAdminDeptGrants',
+      component: '/vision-admin/dept-grants/index',
+      meta: {
+        title: '部门字段授权',
+        icon: 'ri:shield-check-line',
+        keepAlive: true,
+        roles: ['R_SUPER', 'R_ADMIN']
+      }
+    },
+    {
+      path: 'ai-correction-feedback',
+      name: 'VisionAdminAiCorrectionFeedback',
+      component: '/vision-admin/ai-correction-feedback/index',
+      meta: {
+        title: 'AI 修订反馈',
+        icon: 'ri:message-2-line',
+        keepAlive: true,
+        roles: ['R_SUPER', 'R_ADMIN']
+      }
+    },
+    {
+      path: 'all-follow-ups',
+      name: 'VisionAdminAllFollowUps',
+      component: '/vision-admin/all-follow-ups/index',
+      meta: {
+        title: '全局跟进日志',
+        icon: 'ri:chat-history-line',
         keepAlive: true,
         roles: ['R_SUPER', 'R_ADMIN']
       }

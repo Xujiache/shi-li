@@ -602,6 +602,172 @@ async function deleteChildByAdmin(childId) {
   await execute('DELETE FROM children WHERE id = ?', [childId])
 }
 
+// ===== 员工 APP：按部门授权访问孩子档案 =====
+// 复用：childGrantService（避免循环依赖，运行时 require）
+function getGrantService() {
+  return require('./childGrantService')
+}
+
+/**
+ * 员工 APP 列表：返回本部门归属的所有孩子（多对多 child_dept_assignments）。
+ * staff/manager 都按 actor.department_id 过滤。
+ * @param {{id:number, role:string, department_id?:number}} actor
+ * @param {Record<string, any>} params 支持 q / school / grade_name / page / page_size
+ */
+async function listChildrenForEmployee(actor, params = {}) {
+  if (!actor || !actor.id) {
+    throw createAppError('当前会话异常，请重新登录', StatusCodes.UNAUTHORIZED)
+  }
+  if (!actor.department_id) {
+    return { list: [], total: 0, page: 1, page_size: Number(params.page_size) || 20 }
+  }
+
+  const { page, pageSize, offset } = normalizePagination(params.page, params.page_size)
+  const conditions = ['cda.department_id = ?']
+  const values = [Number(actor.department_id)]
+
+  if (params.q) {
+    conditions.push('(c.name LIKE ? OR c.parent_phone LIKE ? OR c.child_no LIKE ?)')
+    values.push(`%${params.q}%`, `%${params.q}%`, `%${params.q}%`)
+  }
+  if (params.school) {
+    conditions.push('c.school = ?')
+    values.push(params.school)
+  }
+  if (params.grade_name) {
+    conditions.push('c.grade_name = ?')
+    values.push(params.grade_name)
+  }
+
+  const whereClause = `WHERE ${conditions.join(' AND ')}`
+  const totalRow = await queryOne(
+    `SELECT COUNT(DISTINCT c.id) AS total
+     FROM children c
+     INNER JOIN child_dept_assignments cda ON cda.child_id = c.id
+     ${whereClause}`,
+    values
+  )
+  const rows = await query(
+    `SELECT DISTINCT c.id, c.child_no, c.name, c.gender, c.dob, c.age, c.school,
+            c.grade_name, c.class_name, c.parent_phone, c.avatar_url, c.updated_at
+     FROM children c
+     INNER JOIN child_dept_assignments cda ON cda.child_id = c.id
+     ${whereClause}
+     ORDER BY c.updated_at DESC
+     LIMIT ${pageSize} OFFSET ${offset}`,
+    values
+  )
+
+  return {
+    list: rows.map((r) => ({
+      id: Number(r.id),
+      _id: String(r.id),
+      child_no: r.child_no,
+      name: r.name,
+      gender: r.gender,
+      dob: r.dob,
+      age: r.age,
+      school: r.school,
+      grade_name: r.grade_name,
+      class_name: r.class_name,
+      parent_phone: r.parent_phone,
+      avatar_url: r.avatar_url,
+      updated_at: r.updated_at
+    })),
+    total: totalRow ? Number(totalRow.total) : 0,
+    page,
+    page_size: pageSize
+  }
+}
+
+/**
+ * 员工 APP 详情：归属校验 + 返回本部门可编辑 sections / fields。
+ * @param {{id:number, role:string, department_id?:number}} actor
+ * @param {number|string} childId
+ * @returns {Promise<{
+ *   child: Record<string, any>,
+ *   allowed_section_keys: string[],
+ *   allowed_field_keys: string[],
+ *   allowed_sections: Array<Record<string, any>>
+ * }>}
+ */
+async function getChildDetailForEmployee(actor, childId) {
+  if (!actor || !actor.id) {
+    throw createAppError('当前会话异常，请重新登录', StatusCodes.UNAUTHORIZED)
+  }
+  if (!actor.department_id) {
+    throw createAppError('当前账号未绑定部门', StatusCodes.FORBIDDEN)
+  }
+
+  // 归属校验：child 必须分配到 actor 部门
+  const grantSvc = getGrantService()
+  const childDepts = await grantSvc.listDeptsByChild(childId)
+  if (!childDepts.includes(Number(actor.department_id))) {
+    throw createAppError('该孩子档案未分配给当前部门', StatusCodes.FORBIDDEN)
+  }
+
+  const child = await getAdminChildDetail(childId) // 复用 admin 视角的完整字段
+  const editable = await grantSvc.resolveEditableFields(actor.department_id)
+  return {
+    child,
+    allowed_section_keys: editable.allowed_section_keys,
+    allowed_field_keys: editable.allowed_field_keys,
+    allowed_sections: editable.allowed_sections
+  }
+}
+
+/**
+ * 员工 APP 写入：仅 patch 字段在授权 fields 内才生效；其他字段静默丢弃。
+ * @param {{id:number, role:string, department_id?:number}} actor
+ * @param {number|string} childId
+ * @param {Record<string, any>} patch
+ * @returns {Promise<{
+ *   child: Record<string, any>,
+ *   accepted_fields: string[],
+ *   dropped_fields: string[]
+ * }>}
+ */
+async function updateChildByEmployee(actor, childId, patch = {}) {
+  if (!actor || !actor.id) {
+    throw createAppError('当前会话异常，请重新登录', StatusCodes.UNAUTHORIZED)
+  }
+  if (!actor.department_id) {
+    throw createAppError('当前账号未绑定部门', StatusCodes.FORBIDDEN)
+  }
+
+  const grantSvc = getGrantService()
+  const childDepts = await grantSvc.listDeptsByChild(childId)
+  if (!childDepts.includes(Number(actor.department_id))) {
+    throw createAppError('该孩子档案未分配给当前部门', StatusCodes.FORBIDDEN)
+  }
+
+  const { allowed_field_keys } = await grantSvc.resolveEditableFields(actor.department_id)
+  const allowedSet = new Set(allowed_field_keys)
+  const accepted = {}
+  const dropped = []
+  for (const key of Object.keys(patch || {})) {
+    if (allowedSet.has(key)) {
+      accepted[key] = patch[key]
+    } else {
+      dropped.push(key)
+    }
+  }
+  if (Object.keys(accepted).length === 0) {
+    throw createAppError(
+      '当前部门没有任何字段授权（或提交字段全部不在授权范围）',
+      StatusCodes.FORBIDDEN
+    )
+  }
+
+  await updateChildByAdmin(childId, accepted)
+  const child = await getAdminChildDetail(childId)
+  return {
+    child,
+    accepted_fields: Object.keys(accepted),
+    dropped_fields: dropped
+  }
+}
+
 module.exports = {
   normalizeChild,
   findChildById,
@@ -615,5 +781,9 @@ module.exports = {
   getAdminChildDetail,
   createChildByAdmin,
   updateChildByAdmin,
-  deleteChildByAdmin
+  deleteChildByAdmin,
+  // employee-side
+  listChildrenForEmployee,
+  getChildDetailForEmployee,
+  updateChildByEmployee
 }

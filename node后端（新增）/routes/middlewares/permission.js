@@ -130,10 +130,38 @@ const isResourceOwner = (getOwnerId) => {
   };
 };
 
+/**
+ * 检查员工身份与角色（用于 /api/v1/employee/* 写操作）。
+ * 严格要求 req.user.type === 'employee'，避免 admin/mobile token 跨用。
+ *
+ * @param  {...('staff'|'manager')} allowedRoles 允许的员工角色，至少传 1 个
+ * @returns {Function} Express 中间件
+ */
+const requireEmployeeRole = (...allowedRoles) => {
+  return (req, res, next) => {
+    try {
+      const user = req.user;
+      if (!user) {
+        return error(res, '无权限访问', StatusCodes.FORBIDDEN);
+      }
+      if (user.type !== 'employee') {
+        return error(res, '需要员工身份', StatusCodes.FORBIDDEN);
+      }
+      if (allowedRoles.length === 0 || allowedRoles.includes(user.role)) {
+        return next();
+      }
+      return error(res, '权限不足', StatusCodes.FORBIDDEN);
+    } catch (err) {
+      return error(res, '权限验证失败', StatusCodes.INTERNAL_SERVER_ERROR);
+    }
+  };
+};
+
 module.exports = {
   checkPermission,
   isAdmin,
   isResourceOwner,
+  requireEmployeeRole,
   /**
    * 检查用户是否为超级管理员（role === 'super_admin'）。
    * 用于保护写操作和导出接口。
@@ -152,4 +180,4 @@ module.exports = {
       return error(res, '权限验证失败', StatusCodes.INTERNAL_SERVER_ERROR);
     }
   }
-}; 
+};

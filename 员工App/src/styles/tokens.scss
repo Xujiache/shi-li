@@ -1,0 +1,90 @@
+// ============================================================
+// Design Tokens — 全局 SCSS 变量 + 工具类
+// ============================================================
+
+// 颜色
+$primary: #1677FF;
+$primary-soft: #E8F3FF;
+$success: #00B42A;
+$warning: #FF7D00;
+$danger: #F53F3F;
+$info: #86909C;
+
+// 中性色
+$text-1: #1F2329;       // 主文字
+$text-2: #4E5969;       // 次文字
+$text-3: #86909C;       // 辅助
+$text-4: #C9CDD4;       // 占位
+$bg-page: #F5F7FA;      // 页面背景
+$bg-card: #FFFFFF;
+$border-1: #F2F3F5;     // hairline
+$border-2: #E5E6EB;
+
+// 间距 (rpx)
+$gap-xs: 8rpx;
+$gap-sm: 16rpx;
+$gap-md: 24rpx;
+$gap-lg: 32rpx;
+
+// 圆角
+$radius-sm: 8rpx;
+$radius-md: 12rpx;
+$radius-lg: 16rpx;
+$radius-xl: 24rpx;
+
+// 阴影
+$shadow-1: 0 1rpx 4rpx rgba(0, 0, 0, 0.04);
+$shadow-2: 0 4rpx 12rpx rgba(0, 0, 0, 0.06);
+
+// ============================================================
+// 通用工具类
+// ============================================================
+
+.card-base {
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.04);
+  margin-bottom: 16rpx;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.btn-primary {
+  background: $primary;
+  color: #FFFFFF;
+  text-align: center;
+  padding: 24rpx;
+  border-radius: 12rpx;
+  font-size: 30rpx;
+  transition: opacity 0.15s ease;
+
+  &:active {
+    opacity: 0.85;
+  }
+
+  &.disabled {
+    opacity: 0.5;
+  }
+}
+
+.btn-ghost {
+  background: $primary-soft;
+  color: $primary;
+  text-align: center;
+  padding: 16rpx 24rpx;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+}
+
+.btn-danger {
+  background: #FFF1F0;
+  color: $danger;
+  text-align: center;
+  padding: 16rpx 24rpx;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+}

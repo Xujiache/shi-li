@@ -4,7 +4,8 @@ const { StatusCodes } = require('http-status-codes')
 
 const USER_TYPES = {
   MOBILE: 'mobile',
-  ADMIN: 'admin'
+  ADMIN: 'admin',
+  EMPLOYEE: 'employee'
 }
 
 /**
@@ -13,7 +14,27 @@ const USER_TYPES = {
  * @returns {string} 对应的 JWT 密钥。
  */
 function getSecretByType(type) {
-  return type === USER_TYPES.ADMIN ? config.jwt.adminSecret : config.jwt.mobileSecret
+  switch (type) {
+    case USER_TYPES.ADMIN:
+      return config.jwt.adminSecret
+    case USER_TYPES.EMPLOYEE:
+      return config.jwt.employeeSecret
+    case USER_TYPES.MOBILE:
+    default:
+      return config.jwt.mobileSecret
+  }
+}
+
+/**
+ * 根据用户类型获取过期时间。
+ * @param {string} type 用户类型。
+ * @returns {string} 过期时间字符串。
+ */
+function getExpiresInByType(type) {
+  if (type === USER_TYPES.EMPLOYEE) {
+    return config.jwt.employeeExpiresIn
+  }
+  return config.jwt.expiresIn
 }
 
 /**
@@ -24,7 +45,7 @@ function getSecretByType(type) {
  */
 function generateToken(payload, type = USER_TYPES.MOBILE) {
   return jwt.sign({ ...payload, type }, getSecretByType(type), {
-    expiresIn: config.jwt.expiresIn
+    expiresIn: getExpiresInByType(type)
   })
 }
 

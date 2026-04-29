@@ -1,0 +1,32 @@
+{
+  "name": "sync-batch",
+  "concurrency": 5,
+  "total": 50,
+  "durationMs": 1032,
+  "rps": 48.45,
+  "okCount": 50,
+  "errorCount": 0,
+  "errorRate": 0,
+  "statusBuckets": {
+    "200": 50
+  },
+  "latency": {
+    "p50": 94.93,
+    "p90": 121.41,
+    "p95": 133.58,
+    "p99": 156.02,
+    "min": 59.94,
+    "max": 156.02,
+    "mean": 99.95
+  },
+  "sampleErrors": [],
+  "cleanup": {
+    "matchedBeforeDelete": 520,
+    "remainingAfterDelete": 0
+  },
+  "thresholds": {
+    "p95Ms": 5000,
+    "errorRate": 0.02
+  },
+  "passed": true
+}

@@ -164,3 +164,63 @@ ui-field, ui-picker-field { display: block; margin-bottom: 14rpx; }
 }
 .btn-primary[disabled] { background: #b6c8d7; color: #fff; box-shadow: none; }
 .footer-tip { margin-top: 14rpx; text-align: center; color: var(--text-200,#888); font-size: 24rpx; }
+
+/* ── 档案分析卡片（AI / 人工） ── */
+.analysis-card {
+  margin: 24rpx 0 0;
+  padding: 28rpx 28rpx 32rpx;
+  background: #fff;
+  border-radius: 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.04);
+}
+.analysis-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1F2329;
+  margin-bottom: 16rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 1rpx solid #F2F3F5;
+}
+.analysis-loading {
+  text-align: center;
+  padding: 24rpx 0;
+  color: #86909C;
+  font-size: 26rpx;
+}
+.analysis-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+.analysis-tag {
+  padding: 6rpx 18rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+  margin-right: 16rpx;
+}
+.tag-ai {
+  background: #FFF7E6;
+  color: #FA8C16;
+}
+.tag-human {
+  background: #E1F3D8;
+  color: #07C160;
+}
+.analysis-time {
+  font-size: 22rpx;
+  color: #86909C;
+}
+.analysis-content {
+  font-size: 28rpx;
+  line-height: 1.8;
+  color: #303133;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.analysis-empty {
+  padding: 24rpx 0;
+  text-align: center;
+  color: #86909C;
+  font-size: 26rpx;
+}

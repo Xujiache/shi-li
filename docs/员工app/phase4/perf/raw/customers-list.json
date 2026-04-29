@@ -1,0 +1,28 @@
+{
+  "name": "customers-list",
+  "concurrency": 8,
+  "total": 1000,
+  "durationMs": 8681,
+  "rps": 115.19,
+  "okCount": 1000,
+  "errorCount": 0,
+  "errorRate": 0,
+  "statusBuckets": {
+    "200": 1000
+  },
+  "latency": {
+    "p50": 71.76,
+    "p90": 91.65,
+    "p95": 96.28,
+    "p99": 105.05,
+    "min": 26.44,
+    "max": 127.52,
+    "mean": 68.73
+  },
+  "sampleErrors": [],
+  "thresholds": {
+    "p95Ms": 800,
+    "errorRate": 0.01
+  },
+  "passed": true
+}

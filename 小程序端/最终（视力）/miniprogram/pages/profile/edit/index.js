@@ -1,5 +1,5 @@
 const app = getApp()
-const { getSchoolOptions, getChildren, createChild, updateChild, getProfileFieldConfig } = require('../../../utils/api')
+const { getSchoolOptions, getChildren, createChild, updateChild, getProfileFieldConfig, getChildAnalysis } = require('../../../utils/api')
 
 const KNOWN_CHILD_COLUMNS = new Set([
   'vision_r', 'vision_l', 'vision_both',
@@ -54,6 +54,8 @@ function stringToCompound(str) {
 Page({
   data: {
     childId: null,
+    analysis: null,
+    analysisLoading: false,
     age: '',
     canSubmit: false,
     schoolOptions: [],
@@ -233,6 +235,7 @@ Page({
           wx.setStorageSync('current_child_id', child._id)
           this.setData({ childId: child._id })
           this.fillFormFromChild(child)
+          this.loadAnalysis(child._id)
         }
       }
       this.updateAgeAndSubmit()
@@ -240,6 +243,19 @@ Page({
       console.error(e)
       this.syncSchoolClassFromForm(false)
       this.updateAgeAndSubmit()
+    }
+  },
+
+  async loadAnalysis(childId) {
+    if (!childId) return
+    this.setData({ analysisLoading: true, analysis: null })
+    try {
+      const data = await getChildAnalysis(childId)
+      this.setData({ analysis: (data && data.analysis) || null })
+    } catch (e) {
+      this.setData({ analysis: null })
+    } finally {
+      this.setData({ analysisLoading: false })
     }
   },
 

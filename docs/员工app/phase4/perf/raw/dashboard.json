@@ -1,0 +1,28 @@
+{
+  "name": "dashboard-me",
+  "concurrency": 10,
+  "total": 500,
+  "durationMs": 3003,
+  "rps": 166.5,
+  "okCount": 500,
+  "errorCount": 0,
+  "errorRate": 0,
+  "statusBuckets": {
+    "200": 500
+  },
+  "latency": {
+    "p50": 64.02,
+    "p90": 79.52,
+    "p95": 85.07,
+    "p99": 93.54,
+    "min": 26,
+    "max": 97.62,
+    "mean": 59.68
+  },
+  "sampleErrors": [],
+  "thresholds": {
+    "p95Ms": 500,
+    "errorRate": 0.01
+  },
+  "passed": true
+}

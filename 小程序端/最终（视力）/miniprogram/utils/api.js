@@ -350,6 +350,18 @@ function getProfileFieldConfig() {
   })
 }
 
+/**
+ * 获取孩子档案分析（人工/AI 自动按 admin 配置选择）。
+ * @param {string|number} childId
+ * @returns {Promise<{analysis: object|null}>}
+ */
+function getChildAnalysis(childId) {
+  return request({
+    method: 'GET',
+    path: `/mobile/children/${childId}/analysis`
+  })
+}
+
 module.exports = {
   registerMobile,
   loginMobile,
@@ -357,6 +369,7 @@ module.exports = {
   getTerms,
   getBanners,
   getProfileFieldConfig,
+  getChildAnalysis,
   getUserProfile,
   updateUserProfile,
   getChildren,

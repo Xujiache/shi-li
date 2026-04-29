@@ -1,4 +1,5 @@
 import api from '@/utils/http'
+import { useUserStore } from '@/store/modules/user'
 
 function paginationParams(params: Record<string, unknown>) {
   const { current, size, page, page_size, ...rest } = params
@@ -707,4 +708,495 @@ export function operationLogsList(params: Record<string, unknown> = {}) {
     url: '/api/v1/admin/operation-logs',
     params: paginationParams(params)
   })
+}
+
+// ===== 员工管理 =====
+export interface EmployeeRow {
+  id: number
+  _id?: number | string
+  phone: string
+  display_name: string
+  role: 'staff' | 'manager'
+  department_id: number | null
+  department_name?: string
+  position: string
+  active: boolean
+  must_change_password?: boolean
+  last_login_at?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface EmployeeListParams {
+  q?: string
+  role?: string
+  department_id?: number
+  active?: boolean
+  page?: number
+  page_size?: number
+  current?: number
+  size?: number
+}
+
+export function employeesList(params: Record<string, unknown> = {}) {
+  return api.get<{ list: EmployeeRow[]; total: number; page: number; page_size: number }>({
+    url: '/api/v1/admin/employees',
+    params: paginationParams(params)
+  })
+}
+
+export function employeesDetail(params: { id: number | string }) {
+  return api.get<EmployeeRow>({
+    url: `/api/v1/admin/employees/${params.id}`
+  })
+}
+
+export function employeesCreate(params: {
+  phone: string
+  password?: string
+  display_name: string
+  role: 'staff' | 'manager'
+  department_id?: number | null
+  position?: string
+}) {
+  return api.post<{ employee: EmployeeRow; default_password?: string }>({
+    url: '/api/v1/admin/employees',
+    params
+  })
+}
+
+export function employeesUpdate(params: {
+  id: number | string
+  patch: {
+    display_name?: string
+    role?: 'staff' | 'manager'
+    department_id?: number | null
+    position?: string
+  }
+}) {
+  return api.put<EmployeeRow>({
+    url: `/api/v1/admin/employees/${params.id}`,
+    params: params.patch
+  })
+}
+
+export function employeesSetStatus(params: { id: number | string; active: boolean }) {
+  return api.put<EmployeeRow>({
+    url: `/api/v1/admin/employees/${params.id}/status`,
+    params: { active: params.active }
+  })
+}
+
+export function employeesResetPassword(params: { id: number | string; password?: string }) {
+  return api.put<{ default_password?: string }>({
+    url: `/api/v1/admin/employees/${params.id}/reset-password`,
+    params: params.password ? { password: params.password } : {}
+  })
+}
+
+export function employeesDelete(params: { id: number | string }) {
+  return api.del({
+    url: `/api/v1/admin/employees/${params.id}`
+  })
+}
+
+// ===== 部门管理 =====
+export interface DepartmentRow {
+  id: number
+  _id?: number | string
+  name: string
+  parent_id: number | null
+  manager_id: number | null
+  sort_order: number
+  active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+export function departmentsList(params: Record<string, unknown> = {}) {
+  return api.get<{ list: DepartmentRow[]; total: number; page: number; page_size: number }>({
+    url: '/api/v1/admin/departments',
+    params: paginationParams(params)
+  })
+}
+
+export function departmentsDetail(params: { id: number | string }) {
+  return api.get<DepartmentRow>({
+    url: `/api/v1/admin/departments/${params.id}`
+  })
+}
+
+export function departmentsCreate(params: {
+  name: string
+  parent_id?: number | null
+  manager_id?: number | null
+  sort_order?: number
+}) {
+  return api.post<DepartmentRow>({
+    url: '/api/v1/admin/departments',
+    params
+  })
+}
+
+export function departmentsUpdate(params: {
+  id: number | string
+  patch: {
+    name?: string
+    parent_id?: number | null
+    manager_id?: number | null
+    sort_order?: number
+    active?: boolean
+  }
+}) {
+  return api.put<DepartmentRow>({
+    url: `/api/v1/admin/departments/${params.id}`,
+    params: params.patch
+  })
+}
+
+export function departmentsDelete(params: { id: number | string }) {
+  return api.del({
+    url: `/api/v1/admin/departments/${params.id}`
+  })
+}
+
+// ===== 员工客户管理 =====
+export interface AdminCustomerRow {
+  id: number
+  _id?: number | string
+  customer_no: string
+  display_name: string
+  phone: string
+  gender: 'male' | 'female' | 'unknown'
+  age: number | null
+  school: string
+  class_name: string
+  source: string
+  status: 'potential' | 'interested' | 'signed' | 'lost'
+  level: 'A' | 'B' | 'C'
+  tags: string[]
+  remark: string
+  assigned_employee_id: number | null
+  assigned_employee_name?: string
+  department_name?: string
+  next_follow_up_at: string | null
+  next_follow_up_text: string
+  last_follow_up_at: string | null
+  active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+export interface AdminCustomerListParams {
+  q?: string
+  status?: string
+  level?: string
+  assigned_employee_id?: number | null
+  department_id?: number | null
+  page?: number
+  page_size?: number
+  current?: number
+  size?: number
+}
+
+export function adminCustomersList(params: Record<string, unknown> = {}) {
+  return api.get<{ list: AdminCustomerRow[]; total: number; page: number; page_size: number }>({
+    url: '/api/v1/admin/customers',
+    params: paginationParams(params)
+  })
+}
+
+export function adminCustomerDetail(params: { id: number | string }) {
+  return api.get<{ customer: AdminCustomerRow }>({
+    url: `/api/v1/admin/customers/${params.id}`
+  })
+}
+
+export function adminCustomerUpdate(params: {
+  id: number | string
+  patch: Partial<{
+    display_name: string
+    phone: string
+    gender: 'male' | 'female' | 'unknown'
+    age: number | null
+    school: string
+    class_name: string
+    status: 'potential' | 'interested' | 'signed' | 'lost'
+    level: 'A' | 'B' | 'C'
+    remark: string
+    next_follow_up_at: string | null
+    next_follow_up_text: string
+    assigned_employee_id: number | null
+    tags: string[]
+  }>
+}) {
+  return api.put<{ customer: AdminCustomerRow }>({
+    url: `/api/v1/admin/customers/${params.id}`,
+    params: params.patch
+  })
+}
+
+/**
+ * 触发客户 CSV 导出：fetch + Bearer token，浏览器保存文件。
+ * 不走 axios 因为 axios 拦截器只处理 JSON。
+ */
+export async function adminCustomersExport(filter: AdminCustomerListParams = {}) {
+  const qs = new URLSearchParams()
+  Object.entries(filter).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') qs.append(k, String(v))
+  })
+  const url = `/api/v1/admin/customers/export${qs.toString() ? `?${qs.toString()}` : ''}`
+  const userStore = useUserStore()
+  const accessToken = (userStore as any).accessToken || ''
+  const headers: Record<string, string> = {}
+  if (accessToken) {
+    headers.Authorization = accessToken.startsWith('Bearer ') ? accessToken : `Bearer ${accessToken}`
+  }
+  const res = await fetch(url, { method: 'GET', headers })
+  if (!res.ok) {
+    throw new Error(`导出失败: HTTP ${res.status}`)
+  }
+  const blob = await res.blob()
+  const ymd = new Date().toISOString().slice(0, 10)
+  const filename = `customers-${ymd}.csv`
+  const dlUrl = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = dlUrl
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  window.URL.revokeObjectURL(dlUrl)
+}
+
+// ===== 孩子档案：部门字段组授权 + 孩子归属 =====
+export interface SectionMeta {
+  key: string
+  label: string
+  enabled: boolean
+  sort_order: number
+}
+
+export interface DeptFieldGrantRow {
+  department_id: number
+  section_keys: string[]
+}
+
+export function adminListAllDeptGrants() {
+  return api.get<{ grants: DeptFieldGrantRow[]; sections: SectionMeta[] }>({
+    url: '/api/v1/admin/dept-field-grants'
+  })
+}
+
+export function adminSetDeptGrants(params: { dept_id: number; section_keys: string[] }) {
+  return api.put<DeptFieldGrantRow>({
+    url: `/api/v1/admin/dept-field-grants/${params.dept_id}`,
+    params: { section_keys: params.section_keys }
+  })
+}
+
+export function adminListChildAssignments(params: { child_id: number | string }) {
+  return api.get<{ child_id: number; department_ids: number[] }>({
+    url: `/api/v1/admin/children/${params.child_id}/assignments`
+  })
+}
+
+export function adminSetChildAssignments(params: { child_id: number | string; dept_ids: number[] }) {
+  return api.post<{ child_id: number; department_ids: number[] }>({
+    url: `/api/v1/admin/children/${params.child_id}/assignments`,
+    params: { dept_ids: params.dept_ids }
+  })
+}
+
+// ===== AI 分析（孩子档案）=====
+export interface AiAnalysisConfig {
+  mode: 'human' | 'ai'
+  model: string
+  few_shot_count: number
+  system_prompt: string
+  stale_hours: number
+}
+
+export interface ChildAnalysisRow {
+  id: number
+  _id?: string
+  child_id: number
+  source: 'human' | 'ai'
+  content: string
+  model: string | null
+  prompt_meta: any
+  tokens_used: number | null
+  created_by_employee_id: number | null
+  created_by_admin_id: number | null
+  active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export function adminGetAiAnalysisConfig() {
+  return api.get<{ config: AiAnalysisConfig }>({ url: '/api/v1/admin/ai-analysis/config' })
+}
+
+export function adminSetAiAnalysisConfig(patch: Partial<AiAnalysisConfig>) {
+  return api.put<{ config: AiAnalysisConfig }>({
+    url: '/api/v1/admin/ai-analysis/config',
+    params: patch
+  })
+}
+
+export function adminListChildAnalyses(params: { child_id: number | string }) {
+  return api.get<{ mode: string; list: ChildAnalysisRow[]; current: ChildAnalysisRow | null }>({
+    url: `/api/v1/admin/children/${params.child_id}/analyses`
+  })
+}
+
+export function adminCreateChildAnalysis(params: { child_id: number | string; content: string }) {
+  return api.post<{ analysis: ChildAnalysisRow }>({
+    url: `/api/v1/admin/children/${params.child_id}/analyses`,
+    params: { content: params.content }
+  })
+}
+
+export function adminGenerateChildAnalysis(params: { child_id: number | string }) {
+  return api.post<{ analysis: ChildAnalysisRow }>({
+    url: `/api/v1/admin/children/${params.child_id}/analyses/generate`,
+    params: {}
+  })
+}
+
+export function adminDeactivateAnalysis(params: { id: number | string }) {
+  return api.del<{ success: boolean; id: number }>({
+    url: `/api/v1/admin/analyses/${params.id}`
+  })
+}
+
+// ===== AI 风格包（蒸馏后的人工分析风格知识库）=====
+export interface AiStylePack {
+  id: number
+  version: number
+  based_on_count: number
+  based_on_max_human_id: number | null
+  content: string
+  model: string | null
+  tokens_used: number | null
+  active: boolean
+  created_at: string
+}
+
+export function adminGetAiStylePack() {
+  return api.get<{ active: AiStylePack | null; history: AiStylePack[] }>({
+    url: '/api/v1/admin/ai-analysis/style-pack'
+  })
+}
+
+export function adminRegenerateAiStylePack(params: { model?: string } = {}) {
+  return api.post<{ pack: AiStylePack }>({
+    url: '/api/v1/admin/ai-analysis/style-pack/regenerate',
+    params: { model: params.model }
+  })
+}
+
+export interface CorrectionOption {
+  code?: string
+  label: string
+  source?: 'base' | 'ai' | 'selected' | 'custom'
+}
+
+export interface AiCorrectionRow {
+  id: number
+  child_id: number
+  child_name: string
+  school: string
+  grade_name: string
+  original_analysis_id: number
+  corrected_analysis_id: number
+  original_model: string
+  original_created_at: string | null
+  corrected_created_at: string | null
+  original_content: string
+  corrected_content: string
+  question_prompt: string
+  question_summary: string
+  generated_options: CorrectionOption[]
+  selected_options: CorrectionOption[]
+  custom_reason: string
+  employee_name: string
+  employee_phone: string
+  created_by_employee_id: number | null
+  created_by_admin_id: number | null
+  created_at: string
+  updated_at: string
+}
+
+export interface AiCorrectionReasonStat {
+  code: string
+  label: string
+  count: number
+}
+
+export function adminListAiCorrections(params: Record<string, unknown> = {}) {
+  return api.get<{ list: AiCorrectionRow[]; total: number; page: number; page_size: number }>({
+    url: '/api/v1/admin/ai-analysis/corrections',
+    params: paginationParams(params)
+  })
+}
+
+export function adminGetAiCorrectionStats() {
+  return api.get<{
+    stats: {
+      list: AiCorrectionReasonStat[]
+      custom_reason_count: number
+      sample_size: number
+    }
+  }>({
+    url: '/api/v1/admin/ai-analysis/corrections/stats'
+  })
+}
+
+// ===== 全局跟进日志 =====
+export interface AdminFollowUpRow {
+  customer_id: number
+  customer_name?: string
+  customer_phone?: string
+  employee_id: number
+  employee_name?: string
+  employee_phone?: string
+  department_name?: string
+  follow_at: string
+  type: string
+  result: string
+  content: string
+  next_follow_up_at: string | null
+  created_at: string
+}
+
+export function adminListAllFollowUps(params: Record<string, unknown> = {}) {
+  return api.get<{ list: AdminFollowUpRow[]; total: number; page: number; page_size: number }>({
+    url: '/api/v1/admin/follow-ups',
+    params: paginationParams(params)
+  })
+}
+
+export async function adminExportAllFollowUps(filter: Record<string, unknown> = {}) {
+  const qs = new URLSearchParams()
+  Object.entries(filter).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') qs.append(k, String(v))
+  })
+  const url = `/api/v1/admin/follow-ups/export${qs.toString() ? `?${qs.toString()}` : ''}`
+  const userStore = useUserStore()
+  const accessToken = (userStore as any).accessToken || ''
+  const headers: Record<string, string> = {}
+  if (accessToken) {
+    headers.Authorization = accessToken.startsWith('Bearer ') ? accessToken : `Bearer ${accessToken}`
+  }
+  const res = await fetch(url, { method: 'GET', headers })
+  if (!res.ok) throw new Error(`导出失败: HTTP ${res.status}`)
+  const blob = await res.blob()
+  const ymd = new Date().toISOString().slice(0, 10)
+  const filename = `follow-ups-${ymd}.csv`
+  const dlUrl = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = dlUrl; a.download = filename
+  document.body.appendChild(a); a.click(); document.body.removeChild(a)
+  window.URL.revokeObjectURL(dlUrl)
 }

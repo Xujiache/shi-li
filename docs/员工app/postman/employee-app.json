@@ -1,0 +1,196 @@
+{
+  "info": {
+    "_postman_id": "shi-li-employee-app-phase1",
+    "name": "shi-li 员工 App Phase 1（38 employee + 11 admin = 49 接口）",
+    "description": "shi-li 项目员工 App Phase 1 完整接口集合。\n\n## 使用方式\n1. 设置 Collection 变量 `base_url`（默认 http://127.0.0.1:3100）\n2. 跑 `Auth > admin login` → 自动写 `admin_token`\n3. 跑 `Auth > staff login` / `manager login` → 自动写 `staff_token` / `manager_token`\n4. 其余请求 Authorization 自动用对应 token\n\n## 测试账号\n- admin: 13800138000 / Admin@123456\n- staff: 13900000001 / Init@2025（must_change_password=1）\n- manager: 13900000002 / Init@2025（must_change_password=1）",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://127.0.0.1:3100" },
+    { "key": "admin_token", "value": "" },
+    { "key": "staff_token", "value": "" },
+    { "key": "manager_token", "value": "" },
+    { "key": "test_customer_id", "value": "" },
+    { "key": "test_follow_up_id", "value": "" },
+    { "key": "test_transfer_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "00-Auth (准备 Token)",
+      "item": [
+        {
+          "name": "admin login",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.collectionVariables.set('admin_token', pm.response.json().data.token);"] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"phone\":\"13800138000\",\"password\":\"Admin@123456\"}" },
+            "url": "{{base_url}}/api/v1/admin/auth/login"
+          }
+        },
+        {
+          "name": "staff login",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.collectionVariables.set('staff_token', pm.response.json().data.token);"] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"phone\":\"13900000001\",\"password\":\"Init@2025\"}" },
+            "url": "{{base_url}}/api/v1/employee/auth/login"
+          }
+        },
+        {
+          "name": "manager login",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.collectionVariables.set('manager_token', pm.response.json().data.token);"] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"phone\":\"13900000002\",\"password\":\"Init@2025\"}" },
+            "url": "{{base_url}}/api/v1/employee/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "01-Admin: Employees (6)",
+      "item": [
+        { "name": "GET /admin/employees", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"}], "url": "{{base_url}}/api/v1/admin/employees?page=1&page_size=20" } },
+        { "name": "GET /admin/employees/:id", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"}], "url": "{{base_url}}/api/v1/admin/employees/1" } },
+        { "name": "POST /admin/employees", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"},{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw", "raw": "{\"phone\":\"13900099999\",\"display_name\":\"Postman 测试员工\",\"role\":\"staff\",\"department_id\":1,\"position\":\"测试岗\"}" }, "url": "{{base_url}}/api/v1/admin/employees" } },
+        { "name": "PUT /admin/employees/:id", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"},{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw", "raw": "{\"display_name\":\"改后名字\"}" }, "url": "{{base_url}}/api/v1/admin/employees/1" } },
+        { "name": "PUT /admin/employees/:id/status", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"},{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw", "raw": "{\"active\":true}" }, "url": "{{base_url}}/api/v1/admin/employees/1/status" } },
+        { "name": "PUT /admin/employees/:id/reset-password", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"},{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw", "raw": "{}" }, "url": "{{base_url}}/api/v1/admin/employees/1/reset-password" } },
+        { "name": "DELETE /admin/employees/:id", "request": { "method": "DELETE", "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"}], "url": "{{base_url}}/api/v1/admin/employees/99" } }
+      ]
+    },
+    {
+      "name": "02-Admin: Departments (5)",
+      "item": [
+        { "name": "GET /admin/departments", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"}], "url": "{{base_url}}/api/v1/admin/departments" } },
+        { "name": "GET /admin/departments/:id", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"}], "url": "{{base_url}}/api/v1/admin/departments/1" } },
+        { "name": "POST /admin/departments", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"},{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw", "raw": "{\"name\":\"Postman 测试部门\",\"sort_order\":99}" }, "url": "{{base_url}}/api/v1/admin/departments" } },
+        { "name": "PUT /admin/departments/:id", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"},{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw", "raw": "{\"name\":\"改名后\"}" }, "url": "{{base_url}}/api/v1/admin/departments/1" } },
+        { "name": "DELETE /admin/departments/:id", "request": { "method": "DELETE", "header": [{"key":"Authorization","value":"Bearer {{admin_token}}"}], "url": "{{base_url}}/api/v1/admin/departments/99" } }
+      ]
+    },
+    {
+      "name": "03-Employee: Auth (4)",
+      "item": [
+        { "name": "POST /auth/login", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw", "raw": "{\"phone\":\"13900000001\",\"password\":\"Init@2025\",\"device_id\":\"postman-001\",\"device_info\":\"Postman Test\"}" }, "url": "{{base_url}}/api/v1/employee/auth/login" } },
+        { "name": "POST /auth/verify-code", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw", "raw": "{\"phone\":\"13900000001\",\"code\":\"000000\"}" }, "url": "{{base_url}}/api/v1/employee/auth/verify-code" } },
+        { "name": "POST /auth/change-password", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"},{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw", "raw": "{\"old_password\":\"Init@2025\",\"new_password\":\"Staff@2026\"}" }, "url": "{{base_url}}/api/v1/employee/auth/change-password" } },
+        { "name": "POST /auth/logout", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/auth/logout" } }
+      ]
+    },
+    {
+      "name": "04-Employee: Me / Dashboard (4)",
+      "item": [
+        { "name": "GET /me", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/me" } },
+        { "name": "PUT /me", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"},{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw", "raw": "{\"display_name\":\"我自己改的名字\"}" }, "url": "{{base_url}}/api/v1/employee/me" } },
+        { "name": "GET /dashboard/me", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/dashboard/me" } },
+        { "name": "GET /dashboard/stats?range=month", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/dashboard/stats?range=month" } }
+      ]
+    },
+    {
+      "name": "05-Employee: Customers (10)",
+      "item": [
+        { "name": "GET /customers", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/customers?page=1&page_size=20" } },
+        {
+          "name": "POST /customers",
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.json().data.customer) pm.collectionVariables.set('test_customer_id', pm.response.json().data.customer.id);"] } }],
+          "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"},{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw", "raw": "{\"display_name\":\"Postman 客户\",\"phone\":\"13800001111\",\"status\":\"potential\",\"level\":\"B\",\"tags\":[\"A级\"],\"client_uuid\":\"pm-customer-001\"}" }, "url": "{{base_url}}/api/v1/employee/customers" }
+        },
+        { "name": "GET /customers/search?q=", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/customers/search?q=Postman" } },
+        { "name": "GET /customers/:id", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/customers/{{test_customer_id}}" } },
+        { "name": "PUT /customers/:id", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"},{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw", "raw": "{\"status\":\"interested\",\"remark\":\"已联系\"}" }, "url": "{{base_url}}/api/v1/employee/customers/{{test_customer_id}}" } },
+        { "name": "PUT /customers/:id/reminder", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"},{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw", "raw": "{\"next_follow_up_at\":\"2026-06-01 10:00:00\",\"next_follow_up_text\":\"周一跟进\"}" }, "url": "{{base_url}}/api/v1/employee/customers/{{test_customer_id}}/reminder" } },
+        { "name": "GET /customers/:id/attachments", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/customers/{{test_customer_id}}/attachments" } },
+        { "name": "POST /customers/:id/attachments", "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"},{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw", "raw": "{\"upload_id\":1,\"file_type\":\"image\"}" }, "url": "{{base_url}}/api/v1/employee/customers/{{test_customer_id}}/attachments" } },
+        { "name": "DELETE /customers/:id/attachments/:aid", "request": { "method": "DELETE", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/customers/{{test_customer_id}}/attachments/1" } },
+        { "name": "DELETE /customers/:id (soft)", "request": { "method": "DELETE", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/customers/{{test_customer_id}}" } }
+      ]
+    },
+    {
+      "name": "06-Employee: Follow-ups (5)",
+      "item": [
+        { "name": "GET /follow-ups", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/follow-ups?page=1&page_size=20" } },
+        {
+          "name": "POST /follow-ups",
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.json().data.follow_up) pm.collectionVariables.set('test_follow_up_id', pm.response.json().data.follow_up.id);"] } }],
+          "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"},{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw", "raw": "{\"customer_id\":{{test_customer_id}},\"follow_at\":\"2026-04-28 10:00:00\",\"type\":\"phone\",\"result\":\"interested\",\"content\":\"Postman 写的跟进\",\"client_uuid\":\"pm-fu-001\"}" }, "url": "{{base_url}}/api/v1/employee/follow-ups" }
+        },
+        { "name": "GET /follow-ups/:id", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/follow-ups/{{test_follow_up_id}}" } },
+        { "name": "PUT /follow-ups/:id", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"},{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw", "raw": "{\"content\":\"补充：客户问了价格\"}" }, "url": "{{base_url}}/api/v1/employee/follow-ups/{{test_follow_up_id}}" } },
+        { "name": "DELETE /follow-ups/:id", "request": { "method": "DELETE", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/follow-ups/{{test_follow_up_id}}" } }
+      ]
+    },
+    {
+      "name": "07-Employee: Customer Transfers (5)",
+      "item": [
+        {
+          "name": "POST /customer-transfers (staff)",
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.json().data.transfer) pm.collectionVariables.set('test_transfer_id', pm.response.json().data.transfer.id);"] } }],
+          "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"},{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw", "raw": "{\"customer_id\":{{test_customer_id}},\"reason\":\"建议转给别的同事\",\"client_uuid\":\"pm-xfer-001\"}" }, "url": "{{base_url}}/api/v1/employee/customer-transfers" }
+        },
+        { "name": "GET /customer-transfers/mine", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/customer-transfers/mine" } },
+        { "name": "GET /customer-transfers/pending (manager)", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{manager_token}}"}], "url": "{{base_url}}/api/v1/employee/customer-transfers/pending" } },
+        { "name": "PUT /customer-transfers/:id/approve (manager)", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{manager_token}}"},{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw", "raw": "{\"to_employee_id\":2,\"approval_remark\":\"通过\"}" }, "url": "{{base_url}}/api/v1/employee/customer-transfers/{{test_transfer_id}}/approve" } },
+        { "name": "PUT /customer-transfers/:id/reject (manager)", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{manager_token}}"},{"key":"Content-Type","value":"application/json"}], "body": { "mode":"raw", "raw": "{\"approval_remark\":\"驳回\"}" }, "url": "{{base_url}}/api/v1/employee/customer-transfers/{{test_transfer_id}}/reject" } }
+      ]
+    },
+    {
+      "name": "08-Employee: Notifications (5)",
+      "item": [
+        { "name": "GET /notifications", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/notifications?page=1&page_size=20" } },
+        { "name": "GET /notifications/unread-count", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/notifications/unread-count" } },
+        { "name": "PUT /notifications/:id/read", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/notifications/1/read" } },
+        { "name": "PUT /notifications/read-all", "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/notifications/read-all" } },
+        { "name": "DELETE /notifications/read", "request": { "method": "DELETE", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/notifications/read" } }
+      ]
+    },
+    {
+      "name": "09-Employee: Team / Misc (3)",
+      "item": [
+        { "name": "GET /team/members", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/team/members" } },
+        { "name": "GET /announcements", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/announcements" } },
+        { "name": "GET /customer-tags", "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}], "url": "{{base_url}}/api/v1/employee/customer-tags" } }
+      ]
+    },
+    {
+      "name": "10-Employee: Uploads (1)",
+      "item": [
+        {
+          "name": "POST /uploads/image",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"}],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "" }
+              ]
+            },
+            "description": "字段名 `file`（不是 image）；返回 {id, url, file_url, relative_path}",
+            "url": "{{base_url}}/api/v1/employee/uploads/image"
+          }
+        }
+      ]
+    },
+    {
+      "name": "11-Employee: Sync (1)",
+      "item": [
+        {
+          "name": "POST /sync/batch",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Authorization","value":"Bearer {{staff_token}}"},{"key":"Content-Type","value":"application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ops\": [\n    {\n      \"op\": \"create\",\n      \"type\": \"customer\",\n      \"client_uuid\": \"pm-sync-customer-001\",\n      \"payload\": {\n        \"display_name\": \"同步创建客户\",\n        \"phone\": \"13700007777\",\n        \"status\": \"potential\",\n        \"level\": \"C\"\n      }\n    },\n    {\n      \"op\": \"create\",\n      \"type\": \"follow_up\",\n      \"client_uuid\": \"pm-sync-fu-001\",\n      \"payload\": {\n        \"customer_id\": 1,\n        \"follow_at\": \"2026-04-28 11:00:00\",\n        \"type\": \"wechat\",\n        \"result\": \"follow_up\",\n        \"content\": \"同步创建跟进\"\n      }\n    }\n  ]\n}"
+            },
+            "url": "{{base_url}}/api/v1/employee/sync/batch"
+          }
+        }
+      ]
+    }
+  ]
+}
