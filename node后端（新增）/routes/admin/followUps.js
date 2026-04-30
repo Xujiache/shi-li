@@ -7,6 +7,7 @@ const express = require('express')
 const router = express.Router()
 const { success } = require('../../utils/response')
 const { asyncRoute } = require('../../utils/asyncRoute')
+const { isSuperAdmin } = require('../middlewares/permission')
 const { listFollowUpsForAdmin } = require('../../services/followUpService')
 
 router.get(
@@ -26,6 +27,7 @@ const EXPORT_DEFAULT_LIMIT = Math.min(
 
 router.get(
   '/export',
+  isSuperAdmin,
   asyncRoute(async (req, res) => {
     // 允许调用方传 limit 收紧导出范围；不允许超过硬上限
     const reqLimit = Number((req.query || {}).limit)

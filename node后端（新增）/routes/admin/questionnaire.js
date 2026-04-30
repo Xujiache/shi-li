@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 const { asyncRoute } = require('../../utils/asyncRoute')
 const { success } = require('../../utils/response')
+const { isSuperAdmin } = require('../middlewares/permission')
 const {
   listQuestionnaires,
   getQuestionnaireDetail,
@@ -127,16 +128,19 @@ async function submissionExportHandler(req, res) {
   success(res, { rows })
 }
 
+// 读接口所有 admin 都能访问
 router.get('/questionnaires', asyncRoute(questionnaireListHandler))
 router.get('/questionnaires/:id', asyncRoute(questionnaireDetailHandler))
-router.post('/questionnaires', asyncRoute(createQuestionnaireHandler))
-router.put('/questionnaires/:id', asyncRoute(updateQuestionnaireHandler))
-router.delete('/questionnaires/:id', asyncRoute(deleteQuestionnaireHandler))
-router.post('/questionnaires/:id/copy', asyncRoute(copyQuestionnaireHandler))
-router.put('/questionnaires/:id/status', asyncRoute(questionnaireStatusHandler))
+// 写接口仅 super_admin
+router.post('/questionnaires', isSuperAdmin, asyncRoute(createQuestionnaireHandler))
+router.put('/questionnaires/:id', isSuperAdmin, asyncRoute(updateQuestionnaireHandler))
+router.delete('/questionnaires/:id', isSuperAdmin, asyncRoute(deleteQuestionnaireHandler))
+router.post('/questionnaires/:id/copy', isSuperAdmin, asyncRoute(copyQuestionnaireHandler))
+router.put('/questionnaires/:id/status', isSuperAdmin, asyncRoute(questionnaireStatusHandler))
 
+// 提交数据：列表/详情普通 admin 可查；导出仅 super_admin（包含 PII）
 router.get('/questionnaire-submissions', asyncRoute(submissionListHandler))
-router.get('/questionnaire-submissions/export', asyncRoute(submissionExportHandler))
+router.get('/questionnaire-submissions/export', isSuperAdmin, asyncRoute(submissionExportHandler))
 router.get('/questionnaire-submissions/:submissionId', asyncRoute(submissionDetailHandler))
 
 module.exports = router

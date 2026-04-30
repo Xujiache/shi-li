@@ -17,7 +17,27 @@ function registerMiddlewares(app) {
   ensureDirectory(config.upload.rootDir)
 
   app.use(helmet({ crossOriginResourcePolicy: false }))
-  app.use(cors())
+
+  // CORS：生产环境只允许 env 中显式配置的 origin
+  const allowed = config.cors.allowedOrigins
+  app.use(cors({
+    origin(origin, callback) {
+      // 无 origin（curl / 同源 / 小程序原生请求）→ 放行
+      if (!origin) return callback(null, true)
+      // 配置了白名单 → 严格匹配
+      if (allowed.length > 0) {
+        if (allowed.includes(origin)) return callback(null, true)
+        return callback(new Error(`CORS not allowed: ${origin}`))
+      }
+      // 没配白名单（dev 默认）→ 全放
+      if (config.server.env === 'production') {
+        return callback(new Error(`CORS not allowed in production without CORS_ALLOWED_ORIGINS configured`))
+      }
+      return callback(null, true)
+    },
+    credentials: true
+  }))
+
   app.use(express.json({ limit: '2mb' }))
   app.use(express.urlencoded({ extended: true, limit: '2mb' }))
 

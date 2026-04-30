@@ -1096,6 +1096,56 @@ export function adminRegenerateAiStylePack(params: { model?: string } = {}) {
   })
 }
 
+export interface AiAnalysisOverview {
+  analyses: {
+    human_active: number
+    ai_active: number
+    human_total: number
+    ai_total: number
+    tokens_total: number
+    children_with_analysis: number
+  }
+  corrections: { total: number }
+  style_pack: {
+    active_version: number | null
+    based_on_count: number
+    created_at: string | null
+    total_versions: number
+  }
+  recent_7d: { ai_count: number; human_count: number; tokens_used: number }
+}
+
+export function adminGetAiAnalysisOverview() {
+  return api.get<{ stats: AiAnalysisOverview }>({
+    url: '/api/v1/admin/ai-analysis/overview'
+  })
+}
+
+export interface AiBulkState {
+  running: boolean
+  startedAt: string | null
+  finishedAt: string | null
+  trigger: string | null
+  total: number
+  done: number
+  ok: number
+  failed: number
+  errors: Array<{ child_id: number; message: string }>
+}
+
+export function adminBulkGenerateAiAnalyses(params: { interval_ms?: number; limit?: number } = {}) {
+  return api.post<{ status: string; total?: number; state?: AiBulkState }>({
+    url: '/api/v1/admin/ai-analysis/bulk-generate',
+    params
+  })
+}
+
+export function adminGetAiBulkStatus() {
+  return api.get<{ state: AiBulkState }>({
+    url: '/api/v1/admin/ai-analysis/bulk-status'
+  })
+}
+
 export interface CorrectionOption {
   code?: string
   label: string
@@ -1199,4 +1249,91 @@ export async function adminExportAllFollowUps(filter: Record<string, unknown> = 
   a.href = dlUrl; a.download = filename
   document.body.appendChild(a); a.click(); document.body.removeChild(a)
   window.URL.revokeObjectURL(dlUrl)
+}
+
+// ===== AI 对话（管理员私有，长上下文）=====
+export interface AiChatConversation {
+  id: number
+  admin_id: number
+  title: string
+  model: string
+  system_prompt: string
+  message_count: number
+  total_tokens: number
+  archived: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface AiChatMessage {
+  id: number
+  conversation_id: number
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  model: string | null
+  prompt_tokens: number | null
+  completion_tokens: number | null
+  total_tokens: number | null
+  created_at: string
+}
+
+export function adminListChatConversations() {
+  return api.get<{ list: AiChatConversation[] }>({
+    url: '/api/v1/admin/ai-chat/conversations'
+  })
+}
+
+export function adminCreateChatConversation(params: {
+  title?: string
+  model?: string
+  system_prompt?: string
+}) {
+  return api.post<{ conversation: AiChatConversation }>({
+    url: '/api/v1/admin/ai-chat/conversations',
+    params
+  })
+}
+
+export function adminUpdateChatConversation(params: {
+  id: number | string
+  title?: string
+  model?: string
+  system_prompt?: string
+  archived?: boolean
+}) {
+  const { id, ...rest } = params
+  return api.put<{ conversation: AiChatConversation }>({
+    url: `/api/v1/admin/ai-chat/conversations/${id}`,
+    params: rest
+  })
+}
+
+export function adminDeleteChatConversation(params: { id: number | string }) {
+  return api.del<{ success: boolean; id: number }>({
+    url: `/api/v1/admin/ai-chat/conversations/${params.id}`
+  })
+}
+
+export function adminClearChatConversation(params: { id: number | string }) {
+  return api.post<{ conversation: AiChatConversation }>({
+    url: `/api/v1/admin/ai-chat/conversations/${params.id}/clear`,
+    params: {}
+  })
+}
+
+export function adminListChatMessages(params: { id: number | string }) {
+  return api.get<{ conversation: AiChatConversation; list: AiChatMessage[] }>({
+    url: `/api/v1/admin/ai-chat/conversations/${params.id}/messages`
+  })
+}
+
+export function adminSendChatMessage(params: { id: number | string; content: string }) {
+  return api.post<{
+    conversation: AiChatConversation
+    user_message: AiChatMessage
+    assistant_message: AiChatMessage
+  }>({
+    url: `/api/v1/admin/ai-chat/conversations/${params.id}/messages`,
+    params: { content: params.content }
+  })
 }

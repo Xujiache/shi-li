@@ -1,32 +1,38 @@
 <template>
-  <view class="team-page">
-    <view v-if="loading && !members.length" class="loading-tip">加载中...</view>
+  <view class="page">
+    <view v-if="loading && !members.length" class="state">加载中...</view>
 
-    <view v-else-if="members.length" class="member-list">
-      <view
-        v-for="m in members"
-        :key="m.id"
-        class="member-item card"
-        @click="onTapMember(m)"
-      >
-        <view class="avatar-wrap">
-          <image
-            v-if="m.avatar_url"
-            class="avatar"
-            :src="m.avatar_url"
-            mode="aspectFill"
-          />
-          <view v-else class="avatar avatar-fallback">{{ initial(m.display_name) }}</view>
-        </view>
-        <view class="info">
-          <view class="line1">
-            <text class="name">{{ m.display_name || '未命名' }}</text>
-            <text class="role-badge" :class="roleBadgeClass(m.role)">{{ roleLabel(m.role) }}</text>
+    <view v-else-if="members.length">
+      <view class="page-tip">点击同事可查看联系方式（{{ members.length }} 人）</view>
+
+      <view class="member-list">
+        <view
+          v-for="m in members"
+          :key="m.id"
+          class="member-item"
+          @click="onTapMember(m)"
+        >
+          <view class="avatar-wrap">
+            <image
+              v-if="m.avatar_url"
+              class="avatar"
+              :src="m.avatar_url"
+              mode="aspectFill"
+            />
+            <view v-else class="avatar avatar-fallback" :class="`bg-${tone(m.id)}`">
+              {{ initial(m.display_name) }}
+            </view>
           </view>
-          <view class="position">{{ m.position || '—' }}</view>
-        </view>
-        <view class="arrow">
-          <svg-icon name="chevron-right" :size="32" color="#C9CDD4" />
+          <view class="info">
+            <view class="line1">
+              <text class="name">{{ m.display_name || '未命名' }}</text>
+              <text class="role-pill" :class="`role-${m.role}`">{{ roleLabel(m.role) }}</text>
+            </view>
+            <view class="position">{{ m.position || '—' }}</view>
+          </view>
+          <view class="action">
+            <svg-icon name="phone" :size="26" color="#1677FF" />
+          </view>
         </view>
       </view>
     </view>
@@ -41,6 +47,7 @@ import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 import { useTeamStore } from '@/stores/team'
 import { useAuthStore } from '@/stores/auth'
 import { fmtPhone } from '@/utils/format'
+import SvgIcon from '@/components/svg-icon.vue'
 
 const auth = useAuthStore()
 const teamStore = useTeamStore()
@@ -52,6 +59,10 @@ function initial(name: string): string {
   if (!name) return '?'
   return name.slice(0, 1).toUpperCase()
 }
+function tone(id: number | string) {
+  const n = Number(id) || 0
+  return ['blue', 'orange', 'green', 'purple', 'red'][n % 5]
+}
 
 function roleLabel(role: string): string {
   if (role === 'manager') return '主管'
@@ -59,20 +70,11 @@ function roleLabel(role: string): string {
   return role || ''
 }
 
-function roleBadgeClass(role: string) {
-  return {
-    'role-mgr': role === 'manager',
-    'role-staff': role === 'staff'
-  }
-}
-
 async function load(force = false) {
   loading.value = true
   try {
     await teamStore.loadMembers(force)
-  } catch (e) {
-    // 拦截器已 toast
-  } finally {
+  } catch (e) { /* */ } finally {
     loading.value = false
   }
 }
@@ -100,10 +102,7 @@ function onTapMember(m: any) {
   })
 }
 
-onShow(() => {
-  if (auth.token) load()
-})
-
+onShow(() => { if (auth.token) load() })
 onPullDownRefresh(async () => {
   await load(true)
   uni.stopPullDownRefresh()
@@ -111,11 +110,17 @@ onPullDownRefresh(async () => {
 </script>
 
 <style lang="scss" scoped>
-.team-page {
-  padding: 24rpx;
+.page {
   min-height: 100vh;
+  background: #F5F7FA;
+  padding-bottom: 80rpx;
 }
-.loading-tip {
+.page-tip {
+  padding: 24rpx 32rpx 0;
+  font-size: 24rpx;
+  color: #86909C;
+}
+.state {
   text-align: center;
   color: #86909C;
   padding: 80rpx 0;
@@ -123,36 +128,43 @@ onPullDownRefresh(async () => {
 }
 
 .member-list {
+  padding: 24rpx;
   display: flex;
   flex-direction: column;
+  gap: 12rpx;
 }
 .member-item {
   display: flex;
   align-items: center;
-  padding: 24rpx;
-  border-radius: 16rpx;
-  box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.04);
-  margin-bottom: 16rpx;
-  transition: opacity 0.15s, transform 0.15s;
-  &:active { opacity: 0.85; transform: scale(0.98); }
+  gap: 20rpx;
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(20, 30, 60, 0.04);
+  transition: transform 0.15s, opacity 0.15s;
+  &:active { opacity: 0.85; transform: scale(0.99); }
 }
-.avatar-wrap {
-  margin-right: 24rpx;
-}
+.avatar-wrap { flex-shrink: 0; }
 .avatar {
-  width: 88rpx;
-  height: 88rpx;
-  border-radius: 44rpx;
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 24rpx;
   background: #F2F3F5;
 }
 .avatar-fallback {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32rpx;
-  color: #4E5969;
+  font-size: 36rpx;
+  color: #ffffff;
   font-weight: 600;
 }
+.bg-blue { background: linear-gradient(135deg, #1677FF, #4096FF); }
+.bg-orange { background: linear-gradient(135deg, #FA8C16, #FFB264); }
+.bg-green { background: linear-gradient(135deg, #00B42A, #4ED365); }
+.bg-purple { background: linear-gradient(135deg, #722ED1, #9254DE); }
+.bg-red { background: linear-gradient(135deg, #F53F3F, #FF7875); }
+
 .info {
   flex: 1;
   min-width: 0;
@@ -164,32 +176,31 @@ onPullDownRefresh(async () => {
 }
 .name {
   font-size: 30rpx;
-  font-weight: 500;
+  font-weight: 600;
   color: #1F2329;
 }
-.role-badge {
+.role-pill {
   font-size: 20rpx;
   padding: 2rpx 12rpx;
-  border-radius: 14rpx;
+  border-radius: 12rpx;
   background: #F2F3F5;
   color: #4E5969;
-}
-.role-mgr {
-  background: #FFF7E6;
-  color: #D46B08;
-}
-.role-staff {
-  background: #E6F4FF;
-  color: #1677FF;
+  &.role-manager { background: #FFF7E6; color: #FA8C16; }
+  &.role-staff { background: #E8F3FF; color: #1677FF; }
 }
 .position {
-  margin-top: 8rpx;
+  margin-top: 6rpx;
   font-size: 24rpx;
   color: #86909C;
 }
-.arrow {
-  margin-left: 8rpx;
+.action {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 18rpx;
+  background: #E8F3FF;
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 </style>

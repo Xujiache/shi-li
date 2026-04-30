@@ -8,17 +8,24 @@ const uni: any = (uniModule as any).default || uniModule
 export default defineConfig({
   plugins: [uni()],
   server: {
-    port: 5173,
+    port: 5174,
     host: '0.0.0.0',
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:3100',
+        target: 'http://127.0.0.1:3000',
         changeOrigin: true
       }
     }
   },
   build: {
     target: 'es2015',
-    chunkSizeWarningLimit: 1500
+    chunkSizeWarningLimit: 1500,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true
+      }
+    }
   }
 })

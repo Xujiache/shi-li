@@ -4,21 +4,29 @@
       <empty-state text="暂无待审批的转出申请" icon="check-circle" />
     </view>
     <view v-else class="list">
-      <view v-for="it in items" :key="it.id" class="card">
+      <view v-for="it in items" :key="it.id" class="item-card">
         <view class="row top">
-          <text class="cust">{{ it.customer_name || `客户#${it.customer_id}` }}</text>
+          <view class="left-info">
+            <text class="cust">{{ it.customer_name || `客户#${it.customer_id}` }}</text>
+            <text class="time">{{ it.from_employee_name || '—' }} · {{ fmtDateTime(it.created_at) }}</text>
+          </view>
           <view class="badge b-pending">待审批</view>
         </view>
-        <view class="row meta">
-          <text class="time">{{ it.from_employee_name || '—' }} · {{ fmtDateTime(it.created_at) }}</text>
+
+        <view class="reason-block">
+          <text class="reason-label">转出原因</text>
+          <text class="reason-text">{{ it.reason || '—' }}</text>
         </view>
-        <view class="row">
-          <text class="lbl">原因</text>
-          <text class="val multi">{{ it.reason || '—' }}</text>
-        </view>
-        <view class="row btns">
-          <button class="btn-approve" size="mini" @tap="onApproveClick(it)">通过</button>
-          <button class="btn-reject" size="mini" @tap="onRejectClick(it)">驳回</button>
+
+        <view class="actions">
+          <view class="btn btn-reject" @tap="onRejectClick(it)">
+            <svg-icon name="x-circle" :size="24" color="#F53F3F" />
+            <text>驳回</text>
+          </view>
+          <view class="btn btn-approve" @tap="onApproveClick(it)">
+            <svg-icon name="check-circle" :size="24" color="#ffffff" />
+            <text>通过</text>
+          </view>
         </view>
       </view>
       <view v-if="loading" class="loading-tip">加载中…</view>
@@ -28,17 +36,21 @@
     <!-- 通过弹窗 -->
     <view v-if="approveDialog.show" class="mask" @tap="closeApprove">
       <view class="dialog" @tap.stop>
-        <view class="d-title">通过转出</view>
+        <view class="d-head">
+          <view class="d-icon d-icon-green">
+            <svg-icon name="check-circle" :size="36" color="#00B42A" />
+          </view>
+          <text class="d-title">通过转出申请</text>
+        </view>
         <view class="d-body">
           <view class="d-row">
-            <text class="d-label">转给</text>
-            <picker
-              :range="memberRange"
-              :value="approveDialog.memberIdx"
-              @change="onMemberChange"
-            >
+            <text class="d-label">转给员工 <text class="req">*</text></text>
+            <picker :range="memberRange" :value="approveDialog.memberIdx" @change="onMemberChange">
               <view class="d-picker">
-                {{ memberRange[approveDialog.memberIdx] || '请选择员工' }}
+                <text :class="{ ph: approveDialog.memberIdx < 0 }">
+                  {{ memberRange[approveDialog.memberIdx] || '请选择员工' }}
+                </text>
+                <svg-icon name="chevron-right" :size="22" color="#C9CDD4" />
               </view>
             </picker>
           </view>
@@ -49,15 +61,14 @@
               class="d-textarea"
               placeholder="可选"
               :maxlength="200"
-              auto-height
             />
           </view>
         </view>
         <view class="d-footer">
-          <button class="d-cancel" size="mini" @tap="closeApprove">取消</button>
-          <button class="d-ok" size="mini" :disabled="approveDialog.submitting" @tap="confirmApprove">
+          <view class="d-btn d-cancel" @tap="closeApprove">取消</view>
+          <view class="d-btn d-ok-green" :class="{ disabled: approveDialog.submitting }" @tap="confirmApprove">
             {{ approveDialog.submitting ? '提交中…' : '确认通过' }}
-          </button>
+          </view>
         </view>
       </view>
     </view>
@@ -65,7 +76,12 @@
     <!-- 驳回弹窗 -->
     <view v-if="rejectDialog.show" class="mask" @tap="closeReject">
       <view class="dialog" @tap.stop>
-        <view class="d-title">驳回转出</view>
+        <view class="d-head">
+          <view class="d-icon d-icon-red">
+            <svg-icon name="x-circle" :size="36" color="#F53F3F" />
+          </view>
+          <text class="d-title">驳回转出申请</text>
+        </view>
         <view class="d-body">
           <view class="d-row col">
             <text class="d-label">驳回原因 <text class="req">*</text></text>
@@ -74,15 +90,18 @@
               class="d-textarea"
               placeholder="请输入驳回原因（必填）"
               :maxlength="200"
-              auto-height
             />
           </view>
         </view>
         <view class="d-footer">
-          <button class="d-cancel" size="mini" @tap="closeReject">取消</button>
-          <button class="d-ok" size="mini" :disabled="rejectDialog.submitting || !rejectDialog.remark.trim()" @tap="confirmReject">
+          <view class="d-btn d-cancel" @tap="closeReject">取消</view>
+          <view
+            class="d-btn d-ok-red"
+            :class="{ disabled: rejectDialog.submitting || !rejectDialog.remark.trim() }"
+            @tap="confirmReject"
+          >
             {{ rejectDialog.submitting ? '提交中…' : '确认驳回' }}
-          </button>
+          </view>
         </view>
       </view>
     </view>
@@ -97,6 +116,7 @@ import { getTeamMembers } from '@/api/employee'
 import { useAuthStore } from '@/stores/auth'
 import { fmtDateTime } from '@/utils/format'
 import { v4 } from '@/utils/uuid'
+import SvgIcon from '@/components/svg-icon.vue'
 
 const auth = useAuthStore()
 const items = ref<any[]>([])
@@ -107,7 +127,7 @@ const loading = ref(false)
 
 const members = ref<any[]>([])
 const memberRange = computed(() =>
-  members.value.map((m) => `${m.display_name || m.name || '员工'}（${m.role || 'staff'}）`)
+  members.value.map((m) => `${m.display_name || m.name || '员工'}（${m.position || (m.role === 'manager' ? '主管' : '员工')}）`)
 )
 
 const approveDialog = ref<{ show: boolean; id: any; memberIdx: number; remark: string; submitting: boolean }>({
@@ -132,9 +152,7 @@ async function loadMembers() {
     const data = await getTeamMembers()
     const list = Array.isArray(data) ? data : ((data as any)?.items || [])
     members.value = list.filter((m: any) => m.role === 'staff' && m.id !== auth.employee?.id)
-  } catch (e) {
-    // 静默
-  }
+  } catch (e) { /* */ }
 }
 
 async function reload() {
@@ -156,9 +174,7 @@ async function fetchPage() {
     hasMore.value = items.value.length < total && list.length > 0
     if (list.length < pageSize) hasMore.value = false
     page.value += 1
-  } catch (e) {
-    // http.ts 已处理
-  } finally {
+  } catch (e) { /* */ } finally {
     loading.value = false
   }
 }
@@ -183,6 +199,7 @@ function onMemberChange(e: any) {
   approveDialog.value.memberIdx = Number(e.detail.value)
 }
 async function confirmApprove() {
+  if (approveDialog.value.submitting) return
   const idx = approveDialog.value.memberIdx
   if (idx < 0 || !members.value[idx]) {
     uni.showToast({ title: '请选择转给的员工', icon: 'none' })
@@ -198,9 +215,7 @@ async function confirmApprove() {
     uni.showToast({ title: '已通过', icon: 'success' })
     removeItem(approveDialog.value.id)
     approveDialog.value.show = false
-  } catch (e) {
-    // http.ts 已 toast
-  } finally {
+  } catch (e) { /* */ } finally {
     approveDialog.value.submitting = false
   }
 }
@@ -213,6 +228,7 @@ function closeReject() {
   rejectDialog.value.show = false
 }
 async function confirmReject() {
+  if (rejectDialog.value.submitting) return
   const remark = rejectDialog.value.remark.trim()
   if (!remark) {
     uni.showToast({ title: '请输入驳回原因', icon: 'none' })
@@ -227,9 +243,7 @@ async function confirmReject() {
     uni.showToast({ title: '已驳回', icon: 'success' })
     removeItem(rejectDialog.value.id)
     rejectDialog.value.show = false
-  } catch (e) {
-    // http.ts 已 toast
-  } finally {
+  } catch (e) { /* */ } finally {
     rejectDialog.value.submitting = false
   }
 }
@@ -240,67 +254,199 @@ function removeItem(id: any) {
 </script>
 
 <style lang="scss" scoped>
-.page { padding: 24rpx; min-height: 100vh; background: #F5F7FA; }
+.page {
+  min-height: 100vh;
+  background: #F5F7FA;
+  padding: 24rpx;
+  padding-bottom: 80rpx;
+}
 .empty-wrap { padding-top: 80rpx; }
-.list { display: flex; flex-direction: column; gap: 20rpx; }
-.card {
-  background: #fff; border-radius: 16rpx; padding: 24rpx;
-  display: flex; flex-direction: column; gap: 12rpx;
-  box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.04);
+
+.list { display: flex; flex-direction: column; gap: 16rpx; }
+.item-card {
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(20, 30, 60, 0.04);
 }
-.row { display: flex; align-items: flex-start; gap: 16rpx; }
-.row.top { justify-content: space-between; align-items: center; }
-.cust { font-size: 30rpx; font-weight: 600; color: #1F2329; }
+.row.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 1rpx solid #F2F3F5;
+  margin-bottom: 16rpx;
+}
+.left-info { flex: 1; min-width: 0; }
+.cust { font-size: 32rpx; font-weight: 600; color: #1F2329; }
+.time { display: block; margin-top: 6rpx; font-size: 22rpx; color: #86909C; }
 .badge {
-  font-size: 22rpx; padding: 4rpx 16rpx; border-radius: 20rpx;
-  &.b-pending { background: #FFF7E8; color: #FF8800; }
+  flex-shrink: 0;
+  font-size: 22rpx;
+  padding: 6rpx 18rpx;
+  border-radius: 16rpx;
+  font-weight: 500;
+  &.b-pending { background: #FFF7E6; color: #FA8C16; }
 }
-.meta .time { font-size: 24rpx; color: #86909C; }
-.lbl { font-size: 26rpx; color: #86909C; min-width: 80rpx; }
-.val { flex: 1; font-size: 26rpx; color: #1F2329; word-break: break-all; }
-.val.multi { line-height: 1.5; }
-.btns { gap: 16rpx; padding-top: 8rpx; }
-.btn-approve {
-  background: #00A65A; color: #fff; font-size: 24rpx; border-radius: 32rpx; padding: 0 32rpx;
-  transition: opacity 0.15s, transform 0.15s;
-  &:active { opacity: 0.85; transform: scale(0.98); }
+
+.reason-block {
+  background: #F7F8FA;
+  border-radius: 16rpx;
+  padding: 16rpx 20rpx;
+  margin-bottom: 20rpx;
+}
+.reason-label {
+  font-size: 22rpx;
+  color: #86909C;
+  display: block;
+  margin-bottom: 6rpx;
+}
+.reason-text {
+  font-size: 26rpx;
+  color: #1F2329;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+.actions {
+  display: flex;
+  gap: 12rpx;
+}
+.btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6rpx;
+  text-align: center;
+  padding: 18rpx 0;
+  border-radius: 16rpx;
+  font-size: 26rpx;
+  font-weight: 500;
+  transition: all 0.15s;
+  &:active { transform: scale(0.98); }
 }
 .btn-reject {
-  background: #F53F3F; color: #fff; font-size: 24rpx; border-radius: 32rpx; padding: 0 32rpx;
-  transition: opacity 0.15s, transform 0.15s;
-  &:active { opacity: 0.85; transform: scale(0.98); }
+  background: #FFF1F0;
+  color: #F53F3F;
 }
-.loading-tip { text-align: center; font-size: 24rpx; color: #86909C; padding: 24rpx 0; }
+.btn-approve {
+  background: linear-gradient(135deg, #00B42A, #4ED365);
+  color: #ffffff;
+  box-shadow: 0 4rpx 12rpx rgba(0, 180, 42, 0.3);
+}
+.btn-approve text { color: #ffffff; }
+
+.loading-tip { text-align: center; font-size: 24rpx; color: #86909C; padding: 32rpx 0; }
 
 /* dialog */
 .mask {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-  display: flex; align-items: center; justify-content: center; z-index: 999;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 0 32rpx;
 }
 .dialog {
-  width: 600rpx; background: #fff; border-radius: 16rpx;
-  display: flex; flex-direction: column; overflow: hidden;
+  width: 100%;
+  max-width: 640rpx;
+  background: #ffffff;
+  border-radius: 32rpx;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
-.d-title { font-size: 32rpx; font-weight: 600; color: #1F2329; padding: 32rpx 32rpx 16rpx; }
-.d-body { padding: 16rpx 32rpx; display: flex; flex-direction: column; gap: 24rpx; }
-.d-row { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
-.d-row.col { flex-direction: column; align-items: stretch; gap: 12rpx; }
-.d-label { font-size: 26rpx; color: #1F2329; }
-.req { color: #F53F3F; }
+.d-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+  padding: 40rpx 32rpx 16rpx;
+}
+.d-icon {
+  width: 96rpx; height: 96rpx;
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.d-icon-green { background: #E6F7ED; }
+.d-icon-red { background: #FFECEB; }
+.d-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1F2329;
+}
+
+.d-body {
+  padding: 8rpx 32rpx 24rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+.d-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  &.col { /* 默认就是 col */ }
+}
+.d-label {
+  font-size: 26rpx;
+  color: #4E5969;
+}
+.req { color: #F53F3F; margin-left: 4rpx; }
 .d-picker {
-  background: #F7F8FA; border-radius: 8rpx; padding: 12rpx 20rpx;
-  font-size: 26rpx; color: #1F2329; min-width: 280rpx; text-align: right;
+  background: #F7F8FA;
+  border-radius: 16rpx;
+  padding: 20rpx;
+  font-size: 28rpx;
+  color: #1F2329;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  &:active { opacity: 0.7; }
 }
+.d-picker .ph { color: #C9CDD4; }
 .d-textarea {
-  background: #F7F8FA; border-radius: 8rpx; padding: 16rpx;
-  font-size: 26rpx; min-height: 160rpx; width: 100%; box-sizing: border-box;
+  background: #F7F8FA;
+  border-radius: 16rpx;
+  padding: 20rpx;
+  font-size: 26rpx;
+  color: #1F2329;
+  min-height: 160rpx;
+  width: 100%;
+  box-sizing: border-box;
 }
+
 .d-footer {
-  display: flex; gap: 16rpx; padding: 16rpx 32rpx 32rpx; justify-content: flex-end;
+  display: flex;
+  gap: 12rpx;
+  padding: 0 32rpx 32rpx;
 }
-.d-cancel { background: #F2F3F5; color: #4E5969; font-size: 26rpx; border-radius: 32rpx; padding: 0 32rpx; }
-.d-ok {
-  background: #1677FF; color: #fff; font-size: 26rpx; border-radius: 32rpx; padding: 0 32rpx;
-  &[disabled] { background: #C9CDD4; color: #fff; }
+.d-btn {
+  flex: 1;
+  text-align: center;
+  padding: 24rpx 0;
+  border-radius: 20rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  transition: all 0.15s;
+  &:active { transform: scale(0.98); }
+  &.disabled { opacity: 0.5; }
+}
+.d-cancel { background: #F2F3F5; color: #4E5969; }
+.d-ok-green {
+  background: linear-gradient(135deg, #00B42A, #4ED365);
+  color: #ffffff;
+  box-shadow: 0 4rpx 16rpx rgba(0, 180, 42, 0.3);
+}
+.d-ok-red {
+  background: linear-gradient(135deg, #F53F3F, #FF7875);
+  color: #ffffff;
+  box-shadow: 0 4rpx 16rpx rgba(245, 63, 63, 0.3);
 }
 </style>

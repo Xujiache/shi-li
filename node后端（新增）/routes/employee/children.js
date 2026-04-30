@@ -19,6 +19,7 @@ const {
 const childGrantService = require('../../services/childGrantService')
 const aiAnalysisService = require('../../services/aiAnalysisService')
 const { createAppError } = require('../../utils/appError')
+const { aiCorrectionLimiter } = require('../../middlewares/rateLimit')
 
 /**
  * 校验员工部门是否被分配该孩子。
@@ -102,7 +103,7 @@ router.get(
     const [config, list, current] = await Promise.all([
       aiAnalysisService.getConfig(),
       aiAnalysisService.listAnalysesByChild(req.params.id),
-      aiAnalysisService.getEmployeeDisplayAnalysis(req.params.id)
+      aiAnalysisService.getEmployeeDisplayAnalysis(req.params.id, { employee_id: req.user && req.user.id })
     ])
     success(res, {
       mode: config.mode,
@@ -135,12 +136,14 @@ router.post(
  */
 router.post(
   '/:id/analyses/:analysisId/correction-prompt',
+  aiCorrectionLimiter,
   asyncRoute(async (req, res) => {
     await ensureChildAccessForEmployee(req.user, req.params.id, { requireFieldGrant: true })
     const prompt = await aiAnalysisService.generateCorrectionPrompt({
       child_id: req.params.id,
       analysis_id: req.params.analysisId,
-      edited_content: req.body && req.body.edited_content
+      edited_content: req.body && req.body.edited_content,
+      employee_id: req.user && req.user.id
     })
     success(res, prompt)
   })

@@ -1004,6 +1004,62 @@ async function createEmployeeAppTables(connection) {
     `
   )
 
+  // ===== 11.f.5 ai_usage_daily：AI 调用每日 token 配额（按 actor + day 聚合） =====
+  await runDDL(
+    connection,
+    `
+      CREATE TABLE IF NOT EXISTS ai_usage_daily (
+        id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+        actor_type ENUM('admin','employee','system') NOT NULL,
+        actor_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+        day_key DATE NOT NULL,
+        tokens_used INT NOT NULL DEFAULT 0,
+        call_count INT NOT NULL DEFAULT 0,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_aud_actor_day (actor_type, actor_id, day_key),
+        KEY idx_aud_day (day_key)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `
+  )
+
+  // ===== 11.g ai_chat_conversations / ai_chat_messages：管理员长上下文对话 =====
+  await runDDL(
+    connection,
+    `
+      CREATE TABLE IF NOT EXISTS ai_chat_conversations (
+        id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+        admin_id BIGINT UNSIGNED NOT NULL,
+        title VARCHAR(200) NOT NULL DEFAULT '新对话',
+        model VARCHAR(64) NOT NULL DEFAULT '',
+        system_prompt TEXT,
+        message_count INT NOT NULL DEFAULT 0,
+        total_tokens INT NOT NULL DEFAULT 0,
+        archived TINYINT(1) NOT NULL DEFAULT 0,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_acc_admin_archived_updated (admin_id, archived, updated_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `
+  )
+  await runDDL(
+    connection,
+    `
+      CREATE TABLE IF NOT EXISTS ai_chat_messages (
+        id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+        conversation_id BIGINT UNSIGNED NOT NULL,
+        role ENUM('user','assistant','system') NOT NULL,
+        content MEDIUMTEXT NOT NULL,
+        model VARCHAR(64) DEFAULT NULL,
+        prompt_tokens INT DEFAULT NULL,
+        completion_tokens INT DEFAULT NULL,
+        total_tokens INT DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_acm_conv_id (conversation_id, id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `
+  )
+
   // ===== 12. 默认部门 + 默认标签种子 =====
   await connection.query(
     `INSERT IGNORE INTO departments (id, name, parent_id, sort_order, active) VALUES (1, '默认部门', NULL, 0, 1)`

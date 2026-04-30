@@ -3,6 +3,7 @@ const router = express.Router()
 const authRoutes = require('./auth')
 const questionnaireRoutes = require('./questionnaire')
 const { authMiddleware, USER_TYPES } = require('../../utils/jwt')
+const { publicTrackLimiter } = require('../../middlewares/rateLimit')
 const { success } = require('../../utils/response')
 const { asyncRoute } = require('../../utils/asyncRoute')
 const { getUserProfile, updateUserProfile } = require('../../services/userService')
@@ -283,7 +284,7 @@ router.get('/config/profile-fields', asyncRoute(async (req, res) => {
   const config = await getProfileFieldConfig()
   success(res, { config })
 }))
-router.post('/analytics/track', asyncRoute(trackHandler))
+router.post('/analytics/track', publicTrackLimiter, asyncRoute(trackHandler))
 router.use('/', authMiddleware(USER_TYPES.MOBILE), questionnaireRoutes)
 
 module.exports = router

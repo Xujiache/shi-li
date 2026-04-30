@@ -1,83 +1,85 @@
 <template>
   <view class="page" v-if="customer">
-    <!-- Tab 切换 -->
-    <view class="tabs">
-      <view
-        v-for="(t, i) in tabs"
-        :key="i"
-        class="tab"
-        :class="{ active: tab === i }"
-        @click="tab = i"
-      >{{ t }}</view>
-    </view>
-
-    <!-- 基本信息 -->
-    <view v-if="tab === 0" class="card">
-      <view class="row">
-        <text class="label">姓名</text>
-        <text class="val">{{ customer.display_name || '-' }}</text>
-      </view>
-      <view class="row">
-        <text class="label">手机号</text>
-        <view class="val flex-row">
-          <text>{{ customer.phone || '-' }}</text>
-          <text v-if="customer.phone" class="call-btn" @click="onCall">呼叫</text>
+    <!-- ===== 顶部客户卡 ===== -->
+    <view class="hero-card">
+      <view class="hero-top">
+        <view class="hero-avatar">{{ avatarChar }}</view>
+        <view class="hero-info">
+          <view class="hero-name-row">
+            <text class="hero-name">{{ customer.display_name || '-' }}</text>
+            <text class="hero-status" :class="'st-' + customer.status">{{ statusText }}</text>
+          </view>
+          <view class="hero-tags-line">
+            <text v-if="customer.level" class="hero-level" :class="'lv-' + customer.level">{{ customer.level }}级</text>
+            <text v-if="genderText !== '-'" class="hero-meta">{{ genderText }}</text>
+            <text v-if="customer.age" class="hero-meta">{{ customer.age }}岁</text>
+            <text v-if="customer.customer_no" class="hero-meta">No.{{ customer.customer_no }}</text>
+          </view>
+          <view v-if="customer.phone" class="hero-phone-row">
+            <svg-icon name="phone" :size="22" color="#86909C" />
+            <text class="hero-phone">{{ customer.phone }}</text>
+            <view class="hero-call" @click="onCall">
+              <svg-icon name="phone" :size="22" color="#ffffff" />
+              <text>呼叫</text>
+            </view>
+          </view>
         </view>
-      </view>
-      <view class="row">
-        <text class="label">状态</text>
-        <text class="val badge" :class="'st-' + customer.status">{{ statusText }}</text>
-      </view>
-      <view class="row">
-        <text class="label">等级</text>
-        <text class="val">{{ customer.level || '-' }}</text>
-      </view>
-      <view class="row">
-        <text class="label">性别</text>
-        <text class="val">{{ genderText }}</text>
-      </view>
-      <view class="row">
-        <text class="label">年龄</text>
-        <text class="val">{{ customer.age || '-' }}</text>
-      </view>
-      <view class="row">
-        <text class="label">学校</text>
-        <text class="val">{{ customer.school || '-' }}</text>
-      </view>
-      <view class="row">
-        <text class="label">班级</text>
-        <text class="val">{{ customer.class_name || '-' }}</text>
-      </view>
-      <view class="row">
-        <text class="label">来源</text>
-        <text class="val">{{ customer.source || '-' }}</text>
-      </view>
-      <view class="row">
-        <text class="label">标签</text>
-        <view class="val">
-          <text v-for="(t, i) in tagList" :key="i" class="tag">{{ t }}</text>
-          <text v-if="!tagList.length">-</text>
-        </view>
-      </view>
-      <view class="row">
-        <text class="label">备注</text>
-        <text class="val">{{ customer.remark || '-' }}</text>
-      </view>
-      <view class="row">
-        <text class="label">客户编号</text>
-        <text class="val">{{ customer.customer_no || '-' }}</text>
-      </view>
-      <view class="actions">
-        <view class="btn-default" @click="goEdit">编辑信息</view>
       </view>
     </view>
 
-    <!-- 跟进记录 -->
-    <view v-if="tab === 1">
+    <!-- ===== Tab ===== -->
+    <view class="tabs-wrap">
+      <view class="tabs">
+        <view
+          v-for="(t, i) in tabs"
+          :key="i"
+          class="tab"
+          :class="{ active: tab === i }"
+          @click="tab = i"
+        >{{ t }}</view>
+      </view>
+    </view>
+
+    <!-- ===== 基本信息 ===== -->
+    <view v-if="tab === 0" class="section">
+      <view class="section-card">
+        <view class="row" v-if="customer.school || customer.class_name">
+          <text class="label">学校 / 班级</text>
+          <text class="val">{{ [customer.school, customer.class_name].filter(Boolean).join(' · ') || '-' }}</text>
+        </view>
+        <view class="row">
+          <text class="label">来源</text>
+          <text class="val">{{ customer.source || '-' }}</text>
+        </view>
+        <view class="row col" v-if="tagList.length">
+          <text class="label">标签</text>
+          <view class="val">
+            <text v-for="(t, i) in tagList" :key="i" class="tag">{{ t }}</text>
+          </view>
+        </view>
+        <view class="row col" v-if="customer.remark">
+          <text class="label">备注</text>
+          <text class="val">{{ customer.remark }}</text>
+        </view>
+        <view class="row" v-if="customer.created_at">
+          <text class="label">建档时间</text>
+          <text class="val">{{ customer.created_at }}</text>
+        </view>
+      </view>
+      <view class="action-pad">
+        <view class="btn-default" @click="goEdit">
+          <svg-icon name="edit-3" :size="26" color="#1677FF" />
+          <text>编辑客户信息</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- ===== 跟进记录 ===== -->
+    <view v-if="tab === 1" class="section">
       <view class="toolbar">
-        <text>共 {{ followUps.length }} 条</text>
+        <text class="toolbar-meta">共 {{ followUps.length }} 条记录</text>
         <view class="add-btn" @click="goNewFollow">
-          <svg-icon name="plus" :size="24" color="#ffffff" />
+          <svg-icon name="plus" :size="22" color="#ffffff" />
           <text>新建跟进</text>
         </view>
       </view>
@@ -87,8 +89,8 @@
       <empty-state v-if="!followUps.length" text="暂无跟进记录" />
     </view>
 
-    <!-- 档案附件 -->
-    <view v-if="tab === 2">
+    <!-- ===== 档案附件 ===== -->
+    <view v-if="tab === 2" class="section">
       <view class="grid">
         <view v-for="a in attachments" :key="a.id" class="grid-item">
           <image :src="a.upload_url || a.url" mode="aspectFill" class="att-img" @click="previewImg(a)" />
@@ -99,29 +101,53 @@
         <view class="grid-item add-item" @click="onAddAttachment">
           <view class="add-plus">
             <svg-icon name="camera" :size="56" color="#C9CDD4" />
+            <text class="add-plus-text">添加附件</text>
           </view>
         </view>
       </view>
-      <empty-state v-if="!attachments.length" text="暂无附件" />
+      <empty-state v-if="!attachments.length" text="暂无附件，点击右上角空位添加" />
     </view>
 
-    <!-- 孩子档案（基础字段直接展示）-->
-    <view v-if="tab === 4">
-      <view v-if="linkedLoading" class="loading">加载中...</view>
-      <view v-else-if="!linkedChildrenList.length" class="card empty-state">
-        <view class="es-icon">
-          <svg-icon name="clipboard-list" :size="64" color="#C9CDD4" />
+    <!-- ===== 跟进提醒 ===== -->
+    <view v-if="tab === 3" class="section">
+      <view class="section-card">
+        <view class="row">
+          <text class="label">下次跟进</text>
+          <text class="val">{{ customer.next_follow_up_at || '未设置' }}</text>
         </view>
-        <view class="es-text">未关联到孩子档案</view>
-        <view class="es-hint">该客户手机号 {{ customer.phone || '' }} 在家长档案中没有匹配的孩子记录</view>
+        <view class="row col" v-if="customer.next_follow_up_text">
+          <text class="label">提醒备注</text>
+          <text class="val">{{ customer.next_follow_up_text }}</text>
+        </view>
+        <view class="row">
+          <text class="label">上次跟进</text>
+          <text class="val">{{ customer.last_follow_up_at || '-' }}</text>
+        </view>
+      </view>
+      <view class="action-pad">
+        <view class="btn-default" @click="editReminder">
+          <svg-icon name="alarm-clock" :size="26" color="#1677FF" />
+          <text>编辑提醒时间</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- ===== 孩子档案 ===== -->
+    <view v-if="tab === 4" class="section">
+      <view v-if="linkedLoading" class="state">加载中...</view>
+      <view v-else-if="!linkedChildrenList.length" class="state empty">
+        <view class="empty-icon">
+          <svg-icon name="clipboard-list" :size="80" color="#C9CDD4" />
+        </view>
+        <view class="empty-title">未关联到孩子档案</view>
+        <view class="empty-hint">该客户手机号 {{ customer.phone || '' }} 在家长档案中没有匹配的孩子记录</view>
       </view>
 
       <view
         v-for="ch in linkedChildrenList"
         :key="ch.id"
-        class="card child-profile"
+        class="child-profile"
       >
-        <!-- 头部 -->
         <view class="cp-head">
           <view class="cp-avatar">{{ String(ch.name || '?').charAt(0) }}</view>
           <view class="cp-name-wrap">
@@ -130,46 +156,31 @@
           </view>
         </view>
 
-        <!-- 基础字段 -->
-        <view class="cp-row">
+        <view class="cp-row" v-if="ch.dob">
           <text class="cp-label">出生日期</text>
-          <text class="cp-val">{{ ch.dob || '-' }}</text>
+          <text class="cp-val">{{ ch.dob }}</text>
         </view>
-        <view class="cp-row">
+        <view class="cp-row" v-if="ch.school || ch.grade_name || ch.class_name">
           <text class="cp-label">学校</text>
-          <text class="cp-val">{{ ch.school || '-' }}</text>
+          <text class="cp-val">{{ [ch.school, ch.grade_name, ch.class_name].filter(Boolean).join(' · ') }}</text>
         </view>
-        <view class="cp-row">
-          <text class="cp-label">年级</text>
-          <text class="cp-val">{{ ch.grade_name || '-' }}</text>
-        </view>
-        <view class="cp-row">
-          <text class="cp-label">班级</text>
-          <text class="cp-val">{{ ch.class_name || '-' }}</text>
-        </view>
-        <view class="cp-row">
+        <view class="cp-row" v-if="ch.parent_phone">
           <text class="cp-label">家长手机</text>
-          <text class="cp-val">{{ ch.parent_phone || '-' }}</text>
+          <text class="cp-val">{{ ch.parent_phone }}</text>
         </view>
-        <view class="cp-row">
-          <text class="cp-label">身高 (cm)</text>
-          <text class="cp-val">{{ ch.height != null ? ch.height : '-' }}</text>
-        </view>
-        <view class="cp-row">
-          <text class="cp-label">体重 (kg)</text>
-          <text class="cp-val">{{ ch.weight != null ? ch.weight : '-' }}</text>
+        <view class="cp-row" v-if="ch.height != null || ch.weight != null">
+          <text class="cp-label">身高 / 体重</text>
+          <text class="cp-val">
+            {{ ch.height != null ? ch.height + ' cm' : '-' }} / {{ ch.weight != null ? ch.weight + ' kg' : '-' }}
+          </text>
         </view>
         <view v-if="(ch.symptoms || []).length" class="cp-row col">
           <text class="cp-label">症状</text>
           <view class="cp-tags">
-            <text
-              v-for="(s, i) in ch.symptoms"
-              :key="i"
-              class="cp-tag"
-            >{{ s }}</text>
+            <text v-for="(s, i) in ch.symptoms" :key="i" class="cp-tag">{{ s }}</text>
           </view>
         </view>
-        <view v-if="ch.symptom_other" class="cp-row">
+        <view v-if="ch.symptom_other" class="cp-row col">
           <text class="cp-label">其他症状</text>
           <text class="cp-val">{{ ch.symptom_other }}</text>
         </view>
@@ -178,41 +189,26 @@
           <text class="cp-val">{{ ch.additional_note }}</text>
         </view>
 
-        <view class="cp-actions">
-          <view class="cp-btn-default" @click="goChildDetail(ch.id)">
-            <text>前往完整档案（视力 / 中医 / 诊断）</text>
-            <svg-icon name="chevron-right" :size="24" color="#1677FF" />
-          </view>
+        <view class="cp-link" @click="goChildDetail(ch.id)">
+          <svg-icon name="clipboard-list" :size="26" color="#1677FF" />
+          <text>查看完整档案 (视力 / 中医 / 诊断)</text>
+          <svg-icon name="chevron-right" :size="24" color="#1677FF" />
         </view>
       </view>
     </view>
 
-    <!-- 跟进提醒 -->
-    <view v-if="tab === 3" class="card">
-      <view class="row">
-        <text class="label">下次跟进</text>
-        <text class="val">{{ customer.next_follow_up_at || '未设置' }}</text>
-      </view>
-      <view class="row">
-        <text class="label">提醒备注</text>
-        <text class="val">{{ customer.next_follow_up_text || '-' }}</text>
-      </view>
-      <view class="row">
-        <text class="label">上次跟进</text>
-        <text class="val">{{ customer.last_follow_up_at || '-' }}</text>
-      </view>
-      <view class="actions">
-        <view class="btn-default" @click="editReminder">编辑提醒</view>
-      </view>
-    </view>
-
-    <!-- 底部操作栏 -->
+    <!-- ===== 底部操作栏 ===== -->
     <view class="bottom-bar">
-      <view class="bb-btn primary" @click="goNewFollow">写跟进</view>
-      <view class="bb-btn" @click="goTransfer">转出</view>
+      <view class="bb-btn" @click="goTransfer">
+        <svg-icon name="share-2" :size="26" color="#4E5969" />
+        <text>转出</text>
+      </view>
+      <view class="bb-btn primary" @click="goNewFollow">
+        <svg-icon name="edit-3" :size="26" color="#ffffff" />
+        <text>写跟进</text>
+      </view>
     </view>
 
-    <!-- 编辑提醒 datetime picker -->
     <datetime-picker
       v-model:visible="reminderPickerVisible"
       :model-value="customer?.next_follow_up_at || null"
@@ -243,6 +239,11 @@ const followUps = ref<any[]>([])
 const attachments = ref<any[]>([])
 const linkedChildrenList = ref<any[]>([])
 const linkedLoading = ref(false)
+
+const avatarChar = computed(() => {
+  const n = customer.value?.display_name || ''
+  return n ? n.slice(0, 1).toUpperCase() : '客'
+})
 
 const statusText = computed(() => {
   const m: Record<string, string> = {
@@ -293,7 +294,6 @@ function genderZh(g: string) {
 function ageText(ch: any) {
   if (ch?.age != null) return `${ch.age} 岁`
   if (ch?.dob) {
-    // 简单按 dob 推算
     const m = String(ch.dob).match(/^(\d{4})-(\d{2})-(\d{2})/)
     if (m) {
       const now = new Date()
@@ -372,7 +372,6 @@ async function attachUploadResult(up: any) {
 
 function onAddAttachment() {
   // #ifdef H5
-  // H5：原生 input file + fetch 上传，避免 uni.chooseImage / uploadFile 异步包裹
   const input = document.createElement('input')
   input.type = 'file'
   input.accept = 'image/*'
@@ -392,7 +391,7 @@ function onAddAttachment() {
       await loadAttachments()
       uni.showToast({ title: '上传成功', icon: 'success' })
     } catch (e) {
-      /* fetch / 后端错误已 throw 提示 */
+      /* */
     } finally {
       uni.hideLoading()
     }
@@ -435,7 +434,6 @@ function removeAttachment(a: any) {
   })
 }
 
-// ===== 编辑提醒时间（datetime-picker）=====
 const reminderPickerVisible = ref(false)
 
 function editReminder() {
@@ -466,43 +464,164 @@ onShow(() => {
 </script>
 
 <style lang="scss" scoped>
-.page { padding: 16rpx; padding-bottom: 140rpx; }
+.page {
+  min-height: 100vh;
+  background: #F5F7FA;
+  padding-bottom: 200rpx;
+}
 
+/* ===== Hero ===== */
+.hero-card {
+  background: linear-gradient(135deg, #1677FF 0%, #4096FF 60%, #5B9CFF 100%);
+  padding: 48rpx 32rpx 56rpx;
+  border-radius: 0 0 32rpx 32rpx;
+  color: #ffffff;
+  margin-bottom: -28rpx;
+}
+.hero-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 20rpx;
+}
+.hero-avatar {
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 28rpx;
+  background: rgba(255, 255, 255, 0.22);
+  border: 3rpx solid rgba(255, 255, 255, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48rpx;
+  font-weight: 700;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+.hero-info { flex: 1; min-width: 0; }
+.hero-name-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  flex-wrap: wrap;
+}
+.hero-name {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #ffffff;
+}
+.hero-status {
+  padding: 4rpx 14rpx;
+  font-size: 22rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+.hero-status.st-potential { background: rgba(255,255,255,0.22); }
+.hero-status.st-interested { background: rgba(250, 140, 22, 0.85); }
+.hero-status.st-signed { background: rgba(0, 180, 42, 0.9); }
+.hero-status.st-lost { background: rgba(245, 63, 63, 0.85); }
+
+.hero-tags-line {
+  margin-top: 12rpx;
+  display: flex;
+  gap: 8rpx;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.hero-level {
+  font-size: 22rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 12rpx;
+  background: rgba(255,255,255,0.25);
+  color: #ffffff;
+  font-weight: 600;
+}
+.hero-level.lv-A { background: rgba(245, 63, 63, 0.95); }
+.hero-level.lv-B { background: rgba(250, 140, 22, 0.95); }
+.hero-level.lv-C { background: rgba(255, 255, 255, 0.25); }
+.hero-meta {
+  font-size: 22rpx;
+  opacity: 0.85;
+}
+
+.hero-phone-row {
+  margin-top: 16rpx;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 16rpx;
+  padding: 8rpx 12rpx 8rpx 16rpx;
+}
+.hero-phone {
+  flex: 1;
+  font-size: 26rpx;
+  color: #ffffff;
+}
+.hero-call {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  background: rgba(255,255,255,0.95);
+  color: #1677FF;
+  padding: 6rpx 16rpx;
+  border-radius: 16rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  &:active { opacity: 0.85; }
+  text { color: #1677FF; }
+}
+
+/* ===== Tabs ===== */
+.tabs-wrap {
+  position: relative;
+  z-index: 1;
+  padding: 0 24rpx;
+}
 .tabs {
   display: flex;
   background: #ffffff;
-  border-radius: 16rpx;
-  margin-bottom: 16rpx;
+  border-radius: 24rpx;
   padding: 8rpx;
+  box-shadow: 0 2rpx 12rpx rgba(20, 30, 60, 0.06);
+  overflow-x: auto;
+  white-space: nowrap;
+  &::-webkit-scrollbar { display: none; }
 }
 .tab {
-  flex: 1;
-  text-align: center;
-  padding: 16rpx 0;
+  flex-shrink: 0;
+  padding: 16rpx 24rpx;
   font-size: 26rpx;
   color: #4E5969;
-  border-radius: 12rpx;
+  border-radius: 16rpx;
+  transition: all 0.15s;
   &.active {
-    background: #1677FF;
+    background: linear-gradient(135deg, #1677FF, #4096FF);
     color: #ffffff;
     font-weight: 600;
   }
 }
 
-.card {
+/* ===== Sections ===== */
+.section {
+  padding: 24rpx;
+}
+.section-card {
   background: #ffffff;
-  border-radius: 16rpx;
+  border-radius: 24rpx;
   padding: 8rpx 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(20, 30, 60, 0.04);
 }
 .row {
   display: flex;
-  padding: 20rpx 0;
+  padding: 24rpx 0;
   border-bottom: 1rpx solid #F2F3F5;
   font-size: 28rpx;
   &:last-child { border-bottom: none; }
+  &.col { flex-direction: column; }
 }
 .label {
-  width: 160rpx;
+  width: 180rpx;
   color: #86909C;
   flex-shrink: 0;
 }
@@ -510,80 +629,69 @@ onShow(() => {
   flex: 1;
   color: #1F2329;
   word-break: break-all;
+  text-align: right;
 }
-.flex-row { display: flex; align-items: center; gap: 16rpx; }
-.call-btn {
-  background: #1677FF;
-  color: #ffffff;
-  font-size: 22rpx;
-  padding: 4rpx 16rpx;
-  border-radius: 8rpx;
-}
-.badge {
-  display: inline-block;
-  padding: 2rpx 16rpx;
-  border-radius: 8rpx;
-  font-size: 24rpx;
-  background: #F2F3F5;
-  &.st-potential { background: #E8F3FF; color: #1677FF; }
-  &.st-interested { background: #FDF6EC; color: #E6A23C; }
-  &.st-signed { background: #F0F9EB; color: #67C23A; }
-  &.st-lost { background: #FEEFEF; color: #F56C6C; }
-}
+.row.col .val { text-align: left; margin-top: 12rpx; }
 .tag {
   display: inline-block;
-  background: #F2F3F5;
-  color: #4E5969;
+  background: #E8F3FF;
+  color: #1677FF;
   padding: 4rpx 16rpx;
-  border-radius: 8rpx;
+  border-radius: 12rpx;
   font-size: 22rpx;
   margin: 4rpx 8rpx 4rpx 0;
 }
 
-.actions {
-  padding: 24rpx 0 16rpx;
-}
+.action-pad { padding: 16rpx 0 0; }
 .btn-default {
-  background: #F2F3F5;
-  color: #1F2329;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  background: #ffffff;
+  color: #1677FF;
   text-align: center;
-  padding: 20rpx;
-  border-radius: 12rpx;
+  padding: 24rpx;
+  border-radius: 20rpx;
   font-size: 28rpx;
+  font-weight: 500;
+  box-shadow: 0 2rpx 12rpx rgba(20, 30, 60, 0.04);
+  &:active { opacity: 0.85; }
 }
 
+/* toolbar */
 .toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16rpx 8rpx;
-  font-size: 24rpx;
-  color: #86909C;
+  padding: 0 8rpx 16rpx;
 }
+.toolbar-meta { font-size: 24rpx; color: #86909C; }
 .add-btn {
-  background: #1677FF;
-  color: #ffffff;
-  padding: 8rpx 20rpx;
-  border-radius: 8rpx;
-  font-size: 24rpx;
   display: inline-flex;
   align-items: center;
   gap: 6rpx;
+  background: linear-gradient(135deg, #1677FF, #4096FF);
+  color: #ffffff;
+  padding: 10rpx 20rpx;
+  border-radius: 16rpx;
+  font-size: 24rpx;
+  box-shadow: 0 4rpx 12rpx rgba(22, 119, 255, 0.3);
   &:active { opacity: 0.85; }
 }
 
+/* attachments */
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12rpx;
-  padding: 8rpx;
 }
 .grid-item {
   position: relative;
   width: 100%;
   padding-top: 100%;
   background: #F2F3F5;
-  border-radius: 12rpx;
+  border-radius: 20rpx;
   overflow: hidden;
 }
 .att-img {
@@ -593,158 +701,128 @@ onShow(() => {
 }
 .att-del {
   position: absolute;
-  top: 4rpx; right: 4rpx;
-  width: 36rpx; height: 36rpx;
-  background: rgba(0,0,0,0.5);
-  color: #ffffff;
-  text-align: center;
-  line-height: 36rpx;
+  top: 8rpx; right: 8rpx;
+  width: 40rpx; height: 40rpx;
+  background: rgba(0,0,0,0.55);
   border-radius: 50%;
-  font-size: 24rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
 }
-.add-item { background: #F2F3F5; &:active { opacity: 0.85; } }
+.add-item { background: #ffffff; border: 2rpx dashed #E5E6EB; }
 .add-plus {
   position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 64rpx;
-  color: #C9CDD4;
-  line-height: 1;
+  flex-direction: column;
+  gap: 8rpx;
 }
+.add-plus-text { font-size: 22rpx; color: #C9CDD4; }
 
+/* state / empty */
+.state {
+  text-align: center;
+  padding: 80rpx 32rpx;
+  color: #86909C;
+  font-size: 26rpx;
+}
+.empty .empty-icon { display: flex; justify-content: center; margin-bottom: 16rpx; }
+.empty-title { font-size: 28rpx; color: #1F2329; font-weight: 600; }
+.empty-hint { margin-top: 8rpx; font-size: 24rpx; color: #86909C; }
+
+/* child profile */
+.child-profile {
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 2rpx 12rpx rgba(20, 30, 60, 0.04);
+}
+.cp-head {
+  display: flex;
+  align-items: center;
+  padding-bottom: 20rpx;
+  margin-bottom: 8rpx;
+  border-bottom: 1rpx solid #F2F3F5;
+}
+.cp-avatar {
+  width: 88rpx; height: 88rpx;
+  border-radius: 22rpx;
+  background: linear-gradient(135deg, #1677FF, #4096FF);
+  color: #ffffff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36rpx; font-weight: 600;
+  margin-right: 20rpx; flex-shrink: 0;
+}
+.cp-name-wrap { flex: 1; min-width: 0; }
+.cp-name { font-size: 32rpx; font-weight: 700; color: #1F2329; }
+.cp-sub { margin-top: 6rpx; font-size: 24rpx; color: #86909C; }
+.cp-row {
+  display: flex;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #F2F3F5;
+  font-size: 26rpx;
+  &:last-child { border-bottom: none; }
+  &.col { flex-direction: column; }
+}
+.cp-label { width: 200rpx; flex-shrink: 0; color: #86909C; }
+.cp-val { flex: 1; color: #1F2329; word-break: break-all; text-align: right; }
+.cp-row.col .cp-val { text-align: left; margin-top: 12rpx; }
+.cp-tags { margin-top: 12rpx; display: flex; flex-wrap: wrap; gap: 12rpx; }
+.cp-tag {
+  padding: 6rpx 16rpx;
+  background: #E8F3FF;
+  color: #1677FF;
+  border-radius: 14rpx;
+  font-size: 22rpx;
+}
+.cp-link {
+  margin-top: 16rpx;
+  padding: 20rpx;
+  background: linear-gradient(135deg, #F0F9FF, #FFFFFF);
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  color: #1677FF;
+  font-size: 26rpx;
+  font-weight: 500;
+  border: 1rpx solid #E8F3FF;
+  &:active { opacity: 0.85; }
+}
+.cp-link text { flex: 1; color: #1677FF; }
+
+/* bottom bar */
 .bottom-bar {
   position: fixed;
   bottom: 0; left: 0; right: 0;
   display: flex;
   background: #ffffff;
-  padding: 16rpx 24rpx;
-  border-top: 1rpx solid #F2F3F5;
+  padding: 16rpx 24rpx 32rpx;
+  box-shadow: 0 -4rpx 16rpx rgba(20, 30, 60, 0.05);
   gap: 16rpx;
   z-index: 10;
 }
 .bb-btn {
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
   text-align: center;
-  padding: 20rpx;
-  border-radius: 12rpx;
+  padding: 24rpx 0;
+  border-radius: 20rpx;
   font-size: 28rpx;
   background: #F2F3F5;
-  color: #1F2329;
+  color: #4E5969;
+  font-weight: 500;
   transition: transform 0.15s ease;
   &:active { transform: scale(0.98); }
   &.primary {
-    background: #1677FF;
+    background: linear-gradient(135deg, #1677FF, #4096FF);
     color: #ffffff;
+    box-shadow: 0 4rpx 16rpx rgba(22, 119, 255, 0.35);
   }
-}
-
-/* 孩子档案基础字段卡片 */
-.child-profile {
-  background: #ffffff;
-  border-radius: 16rpx;
-  padding: 24rpx;
-  margin-bottom: 16rpx;
-}
-.cp-head {
-  display: flex;
-  align-items: center;
-  padding-bottom: 16rpx;
-  margin-bottom: 8rpx;
-  border-bottom: 1rpx solid #F2F3F5;
-}
-.cp-avatar {
-  width: 80rpx; height: 80rpx; border-radius: 50%;
-  background: #1677FF; color: #ffffff;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 32rpx; font-weight: 600;
-  margin-right: 20rpx; flex-shrink: 0;
-}
-.cp-name-wrap { flex: 1; min-width: 0; }
-.cp-name { font-size: 32rpx; font-weight: 600; color: #1F2329; }
-.cp-sub { margin-top: 6rpx; font-size: 24rpx; color: #86909C; }
-
-.cp-row {
-  display: flex;
-  padding: 14rpx 0;
-  border-bottom: 1rpx solid #F2F3F5;
-  font-size: 26rpx;
-  &:last-child { border-bottom: none; }
-  &.col { flex-direction: column; align-items: flex-start; }
-}
-.cp-label {
-  width: 180rpx;
-  flex-shrink: 0;
-  color: #86909C;
-}
-.cp-val {
-  flex: 1;
-  color: #1F2329;
-  word-break: break-all;
-}
-.cp-tags {
-  margin-top: 8rpx;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12rpx;
-}
-.cp-tag {
-  padding: 6rpx 16rpx;
-  background: #E8F3FF;
-  color: #1677FF;
-  border-radius: 16rpx;
-  font-size: 22rpx;
-}
-.cp-actions {
-  margin-top: 16rpx;
-  padding-top: 16rpx;
-  border-top: 1rpx dashed #F2F3F5;
-}
-.cp-btn-default {
-  background: #F0F9FF;
-  color: #1677FF;
-  text-align: center;
-  padding: 20rpx;
-  border-radius: 12rpx;
-  font-size: 26rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6rpx;
-  &:active { opacity: 0.85; }
-}
-
-.empty-state {
-  text-align: center;
-  padding: 64rpx 24rpx;
-}
-.empty-state .es-icon {
-  font-size: 64rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 8rpx;
-}
-.empty-state .es-text {
-  margin-top: 16rpx;
-  font-size: 28rpx;
-  color: #1F2329;
-  font-weight: 600;
-}
-.empty-state .es-hint {
-  margin-top: 8rpx;
-  font-size: 24rpx;
-  color: #86909C;
-}
-.loading {
-  text-align: center;
-  padding: 40rpx 0;
-  color: #86909C;
-  font-size: 24rpx;
+  &.primary text { color: #ffffff; }
 }
 </style>

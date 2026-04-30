@@ -1,140 +1,193 @@
 <template>
-  <view class="aa-card card">
-    <view class="aa-title">
-      <view class="aa-title-left">
-        <svg-icon name="sparkles" :size="32" color="#722ED1" />
+  <view class="aa-card">
+    <view class="aa-head-row">
+      <view class="aa-title">
+        <svg-icon name="sparkles" :size="28" color="#1677FF" />
         <text class="aa-title-text">档案分析</text>
       </view>
-      <text v-if="loading" class="aa-loading">加载中...</text>
+      <text v-if="loading" class="aa-loading">加载中…</text>
     </view>
 
     <view v-if="current" class="aa-current">
-      <view class="aa-head">
+      <view class="aa-meta-row">
         <view class="aa-tag" :class="current.source === 'ai' ? 'tag-ai' : 'tag-human'">
-          <svg-icon
-            :name="current.source === 'ai' ? 'sparkles' : 'user'"
-            :size="22"
-            :color="current.source === 'ai' ? '#722ED1' : '#1677FF'"
-          />
-          <text class="aa-tag-text">{{ currentLabel }}</text>
+          {{ currentLabel }}
         </view>
         <text class="aa-time">{{ fmtDateTime(current.created_at) }}</text>
       </view>
       <view class="aa-content">{{ current.content }}</view>
-      <view class="aa-note">{{ current.prompt_meta?.analysis_kind === 'ai_correction' ? '这是员工基于 AI 报告修订后的版本，会作为后续蒸馏样本。' : 'AI 报告如果不够准确或不够好用，可以直接修订并反馈原因。' }}</view>
+      <view class="aa-note">
+        {{ current.prompt_meta?.analysis_kind === 'ai_correction'
+          ? '这是员工基于 AI 报告修订后的版本，会作为后续蒸馏样本。'
+          : 'AI 报告如果不够准确或不够好用，可以直接修订并反馈原因。' }}
+      </view>
     </view>
     <view v-else-if="!loading" class="aa-empty">
-      <text>{{ mode === 'ai' ? '尚未生成 AI 分析（管理员可在后台触发）' : '暂无人工分析' }}</text>
+      <view class="aa-empty-icon">
+        <svg-icon name="sparkles" :size="56" color="#C9CDD4" />
+      </view>
+      <text class="aa-empty-text">
+        {{ mode === 'ai' ? '尚未生成 AI 分析' : '暂无人工分析' }}
+      </text>
+      <text class="aa-empty-sub">
+        {{ mode === 'ai' ? '管理员可在后台触发批量生成' : '点下方按钮添加一条' }}
+      </text>
     </view>
 
     <view v-if="!loading" class="aa-actions">
-      <view v-if="canEditAi" class="aa-btn warning" @click="openEditAi">修订 AI 报告</view>
-      <view v-if="canWriteHuman" class="aa-btn primary" @click="openWrite">写一条分析</view>
+      <view v-if="canEditAi" class="aa-btn outline" @click="openEditAi">
+        <svg-icon name="edit-3" :size="22" color="#1677FF" />
+        <text>修订 AI</text>
+      </view>
+      <view v-if="canWriteHuman" class="aa-btn primary" @click="openWrite">
+        <svg-icon name="edit-3" :size="22" color="#ffffff" />
+        <text>写一条分析</text>
+      </view>
       <view v-if="list.length > 1" class="aa-btn ghost" @click="historyVisible = true">
-        查看历史（{{ list.length }} 条）
+        历史 {{ list.length }}
       </view>
     </view>
 
-    <view v-if="writeVisible" class="aa-mask" @click.self="writeVisible = false">
-      <view class="aa-panel">
-        <view class="aa-panel-head">
-          <text class="aa-panel-cancel" @click="writeVisible = false">取消</text>
-          <text class="aa-panel-title">写一条分析</text>
-          <text class="aa-panel-confirm" @click="confirmWrite">{{ savingHuman ? '保存中...' : '保存' }}</text>
+    <!-- ===== Sheet 1: 写人工分析 ===== -->
+    <view v-if="writeVisible" class="sheet-mask" @click.self="writeVisible = false">
+      <view class="sheet" @click.stop>
+        <view class="sheet-header">
+          <view class="sheet-close" @click="writeVisible = false">
+            <svg-icon name="x" :size="28" color="#4E5969" />
+          </view>
+          <text class="sheet-title">写一条人工分析</text>
+          <view
+            class="sheet-confirm"
+            :class="{ disabled: savingHuman }"
+            @click="confirmWrite"
+          >{{ savingHuman ? '保存中…' : '保存' }}</view>
         </view>
-        <textarea
-          class="aa-textarea"
-          v-model="writeContent"
-          placeholder="请输入分析内容（AI 模式时会作为 GPT 模仿的范例风格）"
-          maxlength="5000"
-        />
-        <text class="aa-counter">{{ writeContent.length }} / 5000</text>
+        <scroll-view scroll-y class="sheet-body">
+          <view class="sheet-tip">
+            AI 模式时，这条分析会作为 GPT 模仿的范例风格之一。
+          </view>
+          <textarea
+            class="sheet-textarea"
+            v-model="writeContent"
+            placeholder="请输入分析内容（200~400 字为宜）"
+            maxlength="5000"
+            :auto-height="false"
+          />
+          <view class="sheet-counter">{{ writeContent.length }} / 5000</view>
+        </scroll-view>
       </view>
     </view>
 
-    <view v-if="editVisible" class="aa-mask" @click.self="closeEditFlow">
-      <view class="aa-panel aa-panel-large">
-        <view class="aa-panel-head">
-          <text class="aa-panel-cancel" @click="closeEditFlow">取消</text>
-          <text class="aa-panel-title">修订 AI 报告{{ editStep === 'edit' ? '（1/2）' : '（2/2）' }}</text>
-          <text class="aa-panel-confirm" @click="goNextStep">{{ promptLoading ? '生成中...' : nextButtonText }}</text>
+    <!-- ===== Sheet 2: 修订 AI 报告（2 步骤） ===== -->
+    <view v-if="editVisible" class="sheet-mask" @click.self="closeEditFlow">
+      <view class="sheet sheet-large" @click.stop>
+        <view class="sheet-header">
+          <view class="sheet-close" @click="closeEditFlow">
+            <svg-icon name="x" :size="28" color="#4E5969" />
+          </view>
+          <view class="sheet-title-wrap">
+            <text class="sheet-title">修订 AI 报告</text>
+            <view class="step-pills">
+              <view class="step-pill" :class="{ active: editStep === 'edit', done: editStep === 'reason' }">1</view>
+              <view class="step-line" :class="{ done: editStep === 'reason' }" />
+              <view class="step-pill" :class="{ active: editStep === 'reason' }">2</view>
+            </view>
+          </view>
+          <view
+            class="sheet-confirm"
+            :class="{ disabled: promptLoading || submittingCorrection }"
+            @click="goNextStep"
+          >{{ promptLoading ? '生成中…' : nextButtonText }}</view>
         </view>
 
-        <scroll-view scroll-y class="aa-scroll-body">
+        <scroll-view scroll-y class="sheet-body">
           <view v-if="editStep === 'edit'">
-            <view class="aa-step-tip">先修改报告内容，再进入“为什么修改”的反馈步骤。</view>
-            <view class="aa-section-title">{{ editSourceTitle }}</view>
-            <view class="aa-preview">{{ aiOriginalContent }}</view>
+            <view class="sheet-tip">第一步：修改报告内容</view>
 
-            <view class="aa-section-title">修订后的报告</view>
-            <textarea
-              class="aa-textarea aa-textarea-lg"
-              v-model="editedContent"
-              placeholder="请在 AI 报告基础上修改内容"
-              maxlength="5000"
-            />
-            <text class="aa-counter">{{ editedContent.length }} / 5000</text>
+            <view class="block">
+              <view class="block-title">{{ editSourceTitle }}</view>
+              <view class="block-preview">{{ aiOriginalContent }}</view>
+            </view>
+
+            <view class="block">
+              <view class="block-title">修订后的报告</view>
+              <textarea
+                class="sheet-textarea sheet-textarea-lg"
+                v-model="editedContent"
+                placeholder="请在 AI 报告基础上修改内容"
+                maxlength="5000"
+              />
+              <view class="sheet-counter">{{ editedContent.length }} / 5000</view>
+            </view>
           </view>
 
           <view v-else>
-            <view class="aa-step-tip">请选择修改原因；如果选项不够，再补充说明，系统会用这些反馈继续优化 AI。</view>
-            <view class="aa-question-box">
-              <view class="aa-question-title">{{ promptData.prompt || '你主要为什么修改这份 AI 分析？' }}</view>
-              <view v-if="promptData.summary" class="aa-question-summary">{{ promptData.summary }}</view>
+            <view class="sheet-tip">第二步：告诉 AI 你为什么这样改</view>
+
+            <view class="question-card">
+              <view class="question-title">{{ promptData.prompt || '你主要为什么修改这份 AI 分析？' }}</view>
+              <view v-if="promptData.summary" class="question-summary">{{ promptData.summary }}</view>
             </view>
 
-            <view class="aa-section-title">通用原因</view>
-            <view class="aa-chip-group">
-              <text
-                v-for="opt in promptData.base_options"
-                :key="`base-${opt.code || opt.label}`"
-                class="aa-chip"
-                :class="{ active: isOptionSelected(opt) }"
-                @click="toggleOption(opt)"
-              >{{ opt.label }}</text>
+            <view class="block">
+              <view class="block-title">通用原因</view>
+              <view class="chip-group">
+                <text
+                  v-for="opt in promptData.base_options"
+                  :key="`base-${opt.code || opt.label}`"
+                  class="chip"
+                  :class="{ active: isOptionSelected(opt) }"
+                  @click="toggleOption(opt)"
+                >{{ opt.label }}</text>
+              </view>
             </view>
 
-            <view v-if="promptData.suggested_options.length" class="aa-section-title">本次建议追问</view>
-            <view v-if="promptData.suggested_options.length" class="aa-chip-group">
-              <text
-                v-for="opt in promptData.suggested_options"
-                :key="`ai-${opt.code || opt.label}`"
-                class="aa-chip aa-chip-ai"
-                :class="{ active: isOptionSelected(opt) }"
-                @click="toggleOption(opt)"
-              >{{ opt.label }}</text>
+            <view v-if="promptData.suggested_options.length" class="block">
+              <view class="block-title">
+                <text>本次建议追问</text>
+                <text class="block-tag">AI 实时生成</text>
+              </view>
+              <view class="chip-group">
+                <text
+                  v-for="opt in promptData.suggested_options"
+                  :key="`ai-${opt.code || opt.label}`"
+                  class="chip chip-ai"
+                  :class="{ active: isOptionSelected(opt) }"
+                  @click="toggleOption(opt)"
+                >{{ opt.label }}</text>
+              </view>
             </view>
 
-            <view class="aa-section-title">补充说明（可选）</view>
-            <textarea
-              class="aa-textarea aa-textarea-sm"
-              v-model="customReason"
-              placeholder="如果选项不全，可以补充说明真正的修改原因"
-              maxlength="1000"
-            />
-            <text class="aa-counter">{{ customReason.length }} / 1000</text>
+            <view class="block">
+              <view class="block-title">补充说明（可选）</view>
+              <textarea
+                class="sheet-textarea"
+                v-model="customReason"
+                placeholder="如果选项不够，可以补充真正的修改原因"
+                maxlength="1000"
+              />
+              <view class="sheet-counter">{{ customReason.length }} / 1000</view>
+            </view>
           </view>
         </scroll-view>
       </view>
     </view>
 
-    <view v-if="historyVisible" class="aa-mask" @click.self="historyVisible = false">
-      <view class="aa-panel">
-        <view class="aa-panel-head">
-          <text class="aa-panel-cancel" @click="historyVisible = false">关闭</text>
-          <text class="aa-panel-title">分析历史（{{ list.length }} 条）</text>
+    <!-- ===== Sheet 3: 历史 ===== -->
+    <view v-if="historyVisible" class="sheet-mask" @click.self="historyVisible = false">
+      <view class="sheet" @click.stop>
+        <view class="sheet-header">
+          <view class="sheet-close" @click="historyVisible = false">
+            <svg-icon name="x" :size="28" color="#4E5969" />
+          </view>
+          <text class="sheet-title">分析历史 · {{ list.length }} 条</text>
           <text></text>
         </view>
-        <scroll-view scroll-y class="aa-history-list">
-          <view v-for="a in list" :key="a.id" class="aa-history-item">
-            <view class="aa-head">
+        <scroll-view scroll-y class="sheet-body">
+          <view v-for="a in list" :key="a.id" class="history-card">
+            <view class="aa-meta-row">
               <view class="aa-tag" :class="a.source === 'ai' ? 'tag-ai' : 'tag-human'">
-                <svg-icon
-                  :name="a.source === 'ai' ? 'sparkles' : 'user'"
-                  :size="22"
-                  :color="a.source === 'ai' ? '#722ED1' : '#1677FF'"
-                />
-                <text class="aa-tag-text">{{ getAnalysisLabel(a) }}</text>
+                {{ getAnalysisLabel(a) }}
               </view>
               <text class="aa-time">{{ fmtDateTime(a.created_at) }}</text>
             </view>
@@ -366,52 +419,53 @@ onShow(() => { load() })
 </script>
 
 <style lang="scss" scoped>
+/* ===== 卡片本体 ===== */
 .aa-card {
   background: #ffffff;
   border-radius: 16rpx;
   padding: 24rpx;
-  margin-bottom: 16rpx;
-  box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.04);
+}
+.aa-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 16rpx;
+  border-bottom: 1rpx solid #F2F3F5;
 }
 .aa-title {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 10rpx;
+}
+.aa-title-text {
   font-size: 28rpx;
   font-weight: 600;
   color: #1F2329;
-  padding-bottom: 16rpx;
-  border-bottom: 1rpx solid #F2F3F5;
 }
-.aa-title-left {
-  display: flex;
-  align-items: center;
-  gap: 10rpx;
+.aa-loading {
+  font-size: 22rpx;
+  color: #86909C;
 }
-.aa-title-text { color: #1F2329; }
-.aa-loading { font-size: 22rpx; font-weight: normal; color: #86909C; }
 
-.aa-current { padding-top: 16rpx; }
-.aa-head {
+.aa-current { padding-top: 20rpx; }
+.aa-meta-row {
   display: flex;
   align-items: center;
-  gap: 12rpx;
-  margin-bottom: 12rpx;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-bottom: 14rpx;
 }
 .aa-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6rpx;
+  font-size: 22rpx;
   padding: 4rpx 14rpx;
   border-radius: 8rpx;
-  font-size: 22rpx;
   font-weight: 500;
-  &.tag-ai { background: #F4EAFF; color: #722ED1; }
-  &.tag-human { background: #E6F4FF; color: #1677FF; }
+  &.tag-ai { background: #E8F3FF; color: #1677FF; }
+  &.tag-human { background: #F2F3F5; color: #4E5969; }
 }
-.aa-tag-text { line-height: 1; }
-.aa-time { font-size: 22rpx; color: #86909C; }
+.aa-time {
+  font-size: 22rpx;
+  color: #86909C;
+}
 .aa-content {
   font-size: 26rpx;
   line-height: 1.7;
@@ -421,174 +475,295 @@ onShow(() => { load() })
 }
 .aa-note {
   margin-top: 16rpx;
-  padding: 16rpx 18rpx;
-  border-radius: 12rpx;
-  background: #FFF7E6;
-  color: #8C5A11;
+  padding: 14rpx 18rpx;
+  border-radius: 10rpx;
+  background: #FAFBFC;
+  color: #4E5969;
   font-size: 22rpx;
   line-height: 1.6;
+  border-left: 3rpx solid #1677FF;
 }
+
 .aa-empty {
-  padding: 32rpx 0;
+  padding: 48rpx 0 24rpx;
   text-align: center;
+}
+.aa-empty-icon { display: flex; justify-content: center; margin-bottom: 12rpx; }
+.aa-empty-text {
+  display: block;
+  font-size: 26rpx;
+  color: #1F2329;
+  font-weight: 500;
+}
+.aa-empty-sub {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 22rpx;
   color: #86909C;
-  font-size: 24rpx;
 }
 
 .aa-actions {
   display: flex;
-  gap: 16rpx;
+  gap: 12rpx;
   margin-top: 20rpx;
   padding-top: 16rpx;
   border-top: 1rpx solid #F2F3F5;
-  flex-wrap: wrap;
 }
 .aa-btn {
   flex: 1;
-  min-width: 200rpx;
-  padding: 16rpx 0;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6rpx;
+  padding: 18rpx 0;
   border-radius: 12rpx;
   font-size: 26rpx;
-  transition: opacity 0.15s, transform 0.15s;
-  &:active { opacity: 0.85; transform: scale(0.98); }
+  font-weight: 500;
+  transition: opacity 0.15s;
+  &:active { opacity: 0.85; }
   &.primary {
     background: #1677FF;
     color: #ffffff;
   }
-  &.warning {
-    background: #FFF1F0;
-    color: #CF1322;
+  &.primary text { color: #ffffff; }
+  &.outline {
+    background: #ffffff;
+    color: #1677FF;
+    border: 1rpx solid #91CAFF;
   }
+  &.outline text { color: #1677FF; }
   &.ghost {
+    flex: 0 0 auto;
+    padding: 18rpx 24rpx;
     background: #F2F3F5;
     color: #4E5969;
   }
 }
 
-.aa-mask {
+/* ===== Sheet（抽屉式）===== */
+.sheet-mask {
   position: fixed; inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.5);
   display: flex; align-items: flex-end;
   z-index: 999;
+  animation: mask-fade 0.2s ease;
 }
-.aa-panel {
+@keyframes mask-fade {
+  from { background: rgba(0, 0, 0, 0); }
+  to { background: rgba(0, 0, 0, 0.5); }
+}
+.sheet {
   width: 100%;
-  background: #ffffff;
+  background: #F4F5F7;
   border-top-left-radius: 24rpx;
   border-top-right-radius: 24rpx;
-  max-height: 80vh;
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
+  animation: sheet-up 0.25s cubic-bezier(0.2, 0.9, 0.3, 1);
 }
-.aa-panel-large { max-height: 88vh; }
-.aa-panel-head {
+.sheet-large { max-height: 92vh; }
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.sheet-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24rpx;
-  border-bottom: 1rpx solid #F2F3F5;
+  gap: 12rpx;
+  padding: 20rpx 16rpx;
+  background: #ffffff;
+  border-top-left-radius: 24rpx;
+  border-top-right-radius: 24rpx;
+  border-bottom: 1rpx solid #F0F1F3;
 }
-.aa-panel-title { font-size: 30rpx; font-weight: 600; color: #1F2329; }
-.aa-panel-cancel { font-size: 28rpx; color: #86909C; padding: 0 8rpx; }
-.aa-panel-confirm { font-size: 28rpx; color: #1677FF; font-weight: 600; padding: 0 8rpx; }
+.sheet-close {
+  width: 64rpx; height: 64rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  &:active { background: #F2F3F5; }
+}
+.sheet-title-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+}
+.sheet-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1F2329;
+  flex: 1;
+  text-align: center;
+}
+.step-pills {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+.step-pill {
+  width: 32rpx; height: 32rpx;
+  border-radius: 50%;
+  background: #F2F3F5;
+  color: #86909C;
+  font-size: 20rpx;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  &.active { background: #1677FF; color: #ffffff; }
+  &.done { background: #00B42A; color: #ffffff; }
+}
+.step-line {
+  width: 32rpx; height: 2rpx;
+  background: #E5E6EB;
+  &.done { background: #00B42A; }
+}
+.sheet-confirm {
+  flex-shrink: 0;
+  padding: 12rpx 24rpx;
+  background: #1677FF;
+  color: #ffffff;
+  font-size: 26rpx;
+  font-weight: 600;
+  border-radius: 8rpx;
+  &:active { opacity: 0.85; }
+  &.disabled {
+    opacity: 0.5;
+  }
+}
 
-.aa-step-tip {
+.sheet-body {
+  flex: 1;
+  padding: 16rpx;
+  background: #F4F5F7;
+}
+.sheet-tip {
   margin-bottom: 16rpx;
-  padding: 16rpx 18rpx;
-  border-radius: 12rpx;
-  background: #F7F8FA;
-  color: #4E5969;
+  padding: 14rpx 16rpx;
+  border-radius: 8rpx;
+  background: #E8F3FF;
+  color: #1677FF;
   font-size: 22rpx;
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
-.aa-scroll-body {
-  padding: 24rpx;
-  max-height: 72vh;
+.block {
+  background: #ffffff;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  margin-bottom: 12rpx;
 }
-.aa-section-title {
-  margin-bottom: 16rpx;
+.block-title {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
   font-size: 26rpx;
   font-weight: 600;
   color: #1F2329;
+  margin-bottom: 12rpx;
 }
-.aa-preview {
-  margin-bottom: 24rpx;
-  padding: 20rpx;
-  border-radius: 12rpx;
-  background: #F7F8FA;
-  color: #4E5969;
+.block-tag {
+  font-size: 20rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  background: #FFF7E6;
+  color: #FA8C16;
+  font-weight: 400;
+}
+.block-preview {
+  padding: 16rpx;
+  background: #FAFBFC;
+  border-radius: 8rpx;
   font-size: 24rpx;
   line-height: 1.7;
+  color: #4E5969;
   white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 280rpx;
+  overflow-y: auto;
 }
-.aa-textarea {
+
+.sheet-textarea {
   width: 100%;
   box-sizing: border-box;
-  margin-bottom: 8rpx;
-  background: #F7F8FA;
-  border-radius: 12rpx;
-  padding: 16rpx;
+  background: #FAFBFC;
+  border-radius: 8rpx;
+  padding: 14rpx 16rpx;
   font-size: 26rpx;
   line-height: 1.6;
+  min-height: 200rpx;
+  color: #1F2329;
 }
-.aa-textarea-lg { min-height: 360rpx; }
-.aa-textarea-sm { min-height: 180rpx; }
-.aa-counter {
-  display: block;
+.sheet-textarea-lg { min-height: 320rpx; }
+.sheet-counter {
   text-align: right;
-  margin-bottom: 24rpx;
+  margin-top: 8rpx;
   font-size: 22rpx;
   color: #86909C;
 }
-.aa-question-box {
-  margin-bottom: 24rpx;
+
+.question-card {
+  background: #ffffff;
+  border-radius: 12rpx;
   padding: 20rpx;
-  border-radius: 14rpx;
-  background: #F4EAFF;
+  margin-bottom: 12rpx;
+  border-left: 4rpx solid #1677FF;
 }
-.aa-question-title {
+.question-title {
   font-size: 28rpx;
   font-weight: 600;
-  color: #531DAB;
+  color: #1F2329;
   line-height: 1.5;
 }
-.aa-question-summary {
+.question-summary {
   margin-top: 8rpx;
   font-size: 24rpx;
-  color: #722ED1;
+  color: #4E5969;
   line-height: 1.6;
 }
-.aa-chip-group {
+
+.chip-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 14rpx;
-  margin-bottom: 24rpx;
+  gap: 12rpx;
 }
-.aa-chip {
-  padding: 14rpx 20rpx;
-  border-radius: 999rpx;
+.chip {
+  padding: 12rpx 20rpx;
+  border-radius: 24rpx;
   background: #F2F3F5;
   color: #4E5969;
   font-size: 24rpx;
   line-height: 1.2;
+  border: 1rpx solid transparent;
+  transition: all 0.15s;
+  &:active { transform: scale(0.96); }
   &.active {
-    background: #E6F4FF;
+    background: #E8F3FF;
     color: #1677FF;
-    border: 1rpx solid #91CAFF;
+    border-color: #91CAFF;
   }
 }
-.aa-chip-ai.active {
-  background: #F4EAFF;
-  color: #722ED1;
-  border: 1rpx solid #D3ADF7;
+.chip.chip-ai {
+  background: #FFF7E6;
+  color: #B96A00;
+  &.active {
+    background: #FFEFD0;
+    color: #B96A00;
+    border-color: #FFD591;
+  }
 }
 
-.aa-history-list { padding: 0 24rpx; max-height: 60vh; }
-.aa-history-item {
-  padding: 24rpx 0;
-  border-bottom: 1rpx solid #F2F3F5;
-  &:last-child { border-bottom: none; }
+.history-card {
+  background: #ffffff;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  margin-bottom: 12rpx;
 }
 </style>

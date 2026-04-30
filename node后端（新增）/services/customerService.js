@@ -230,9 +230,8 @@ async function createCustomer(actor, payload = {}) {
   if (!displayName) throw createAppError('客户姓名不能为空', StatusCodes.UNPROCESSABLE_ENTITY)
   if (!phone) throw createAppError('手机号不能为空', StatusCodes.UNPROCESSABLE_ENTITY)
 
-  const assignedEmployeeId = payload.assigned_employee_id != null
-    ? Number(payload.assigned_employee_id)
-    : Number(actor.id)
+  // 创建客户始终归属当前操作员；要转给别人必须走 transfer 流程
+  const assignedEmployeeId = Number(actor.id)
 
   const tagsJson = safeJsonStringify(Array.isArray(payload.tags) ? payload.tags : [])
   const status = payload.status || 'potential'
@@ -338,6 +337,7 @@ async function updateCustomer(actor, id, patch = {}) {
   const updates = []
   const values = []
 
+  // ⚠️ 安全：assigned_employee_id 不能在此通过 PUT 直接改——必须走 customer_transfers 审批流程。
   const fieldMap = {
     display_name: (v) => String(v || ''),
     phone: (v) => String(v || ''),
@@ -350,8 +350,7 @@ async function updateCustomer(actor, id, patch = {}) {
     level: (v) => v || 'C',
     remark: (v) => (v == null ? null : String(v)),
     next_follow_up_at: (v) => parseClientDatetime(v),
-    next_follow_up_text: (v) => String(v || ''),
-    assigned_employee_id: (v) => (v == null ? null : Number(v))
+    next_follow_up_text: (v) => String(v || '')
   }
   for (const key of Object.keys(fieldMap)) {
     if (patch[key] !== undefined) {

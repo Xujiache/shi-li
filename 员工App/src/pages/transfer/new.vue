@@ -1,50 +1,56 @@
 <template>
   <view class="page">
-    <view class="card">
-      <view class="row">
-        <text class="label">客户</text>
-        <view class="value-wrap" @tap="onPickCustomer">
-          <text v-if="customerName" class="value">{{ customerName }}</text>
-          <text v-else class="value placeholder">点击选择客户</text>
-          <view class="arrow">
-            <svg-icon name="chevron-right" :size="28" color="#C9CDD4" />
+    <view class="page-tip">填写转出申请，提交后由部门主管审批</view>
+
+    <view class="section">
+      <view class="section-title">客户</view>
+      <view class="section-card">
+        <view class="form-row tap" @tap="onPickCustomer">
+          <text class="label">要转出的客户</text>
+          <view class="picker">
+            <text v-if="customerName" class="val">{{ customerName }}</text>
+            <text v-else class="ph">点击选择</text>
+            <svg-icon name="chevron-right" :size="22" color="#C9CDD4" />
           </view>
         </view>
       </view>
-      <view class="row col">
-        <text class="label">转出原因 <text class="req">*</text></text>
+    </view>
+
+    <view class="section">
+      <view class="section-title">转出原因 <text class="req">*</text></view>
+      <view class="section-card">
         <textarea
           v-model="reason"
           class="textarea"
-          placeholder="请详细说明转出原因（必填）"
+          placeholder="请详细说明转出原因（必填，便于审批）"
           :maxlength="500"
-          auto-height
         />
-        <text class="counter">{{ reason.length }} / 500</text>
+        <view class="counter-row">
+          <text class="counter">{{ reason.length }} / 500</text>
+        </view>
       </view>
     </view>
-    <view class="actions">
-      <button class="btn-primary" :disabled="submitting || !canSubmit" @tap="onSubmit">
-        {{ submitting ? '提交中…' : '提交申请' }}
-      </button>
+
+    <view class="submit-bar">
+      <view class="btn-primary" :class="{ disabled: submitting || !canSubmit }" @tap="onSubmit">
+        {{ submitting ? '提交中...' : '提交申请' }}
+      </view>
     </view>
 
-    <!-- 客户选择弹层（与写跟进页共用样式） -->
+    <!-- 客户选择弹层 -->
     <view v-if="pickerVisible" class="picker-mask" @click.self="pickerVisible = false">
       <view class="picker-panel">
         <view class="picker-head">
           <text class="picker-title">选择要转出的客户</text>
           <view class="picker-close" @click="pickerVisible = false">
-            <svg-icon name="x" :size="36" color="#86909C" />
+            <svg-icon name="x" :size="32" color="#86909C" />
           </view>
         </view>
         <view class="picker-search">
-          <input
-            class="picker-input"
-            v-model="pickerQ"
-            placeholder="搜索 姓名 / 手机 / 编号"
-            confirm-type="search"
-          />
+          <view class="picker-search-box">
+            <svg-icon name="search" :size="26" color="#86909C" />
+            <input class="picker-input" v-model="pickerQ" placeholder="搜索 姓名 / 手机 / 编号" confirm-type="search" />
+          </view>
         </view>
         <scroll-view scroll-y class="picker-list">
           <view v-if="pickerLoading" class="picker-state">加载中...</view>
@@ -61,6 +67,7 @@
               <text class="pi-name">{{ c.display_name }}</text>
               <text class="pi-sub">{{ c.phone || '-' }} · {{ statusZh(c.status) }} · {{ c.level }}级</text>
             </view>
+            <svg-icon name="chevron-right" :size="24" color="#C9CDD4" />
           </view>
         </scroll-view>
       </view>
@@ -75,6 +82,7 @@ import * as transferApi from '@/api/transfer'
 import * as customerApi from '@/api/customer'
 import { useAuthStore } from '@/stores/auth'
 import { v4 } from '@/utils/uuid'
+import SvgIcon from '@/components/svg-icon.vue'
 
 const auth = useAuthStore()
 
@@ -88,24 +96,20 @@ const canSubmit = computed(() => !!customerId.value && reason.value.trim().lengt
 onLoad((q: any) => {
   if (q && q.customer_id) {
     customerId.value = q.customer_id
-    if (q.customer_name) {
-      customerName.value = decodeURIComponent(q.customer_name)
-    } else {
-      loadCustomer(q.customer_id)
-    }
+    if (q.customer_name) customerName.value = decodeURIComponent(q.customer_name)
+    else loadCustomer(q.customer_id)
   }
 })
 
 async function loadCustomer(id: string | number) {
   try {
     const data = await customerApi.detail(id)
-    customerName.value = data?.name || data?.full_name || `客户#${id}`
+    customerName.value = data?.display_name || data?.name || `客户#${id}`
   } catch (e) {
     customerName.value = `客户#${id}`
   }
 }
 
-// ===== 客户选择器 =====
 const pickerVisible = ref(false)
 const pickerQ = ref('')
 const pickerLoading = ref(false)
@@ -173,53 +177,99 @@ async function onSubmit() {
       uni.showToast({ title: '已离线保存，联网后自动提交', icon: 'none' })
     }
     setTimeout(() => uni.redirectTo({ url: '/pages/transfer/mine' }), 600)
-  } catch (e) {
-    // http.ts 拦截器已 toast
-  } finally {
+  } catch (e) { /* */ } finally {
     submitting.value = false
   }
 }
 </script>
 
 <style lang="scss" scoped>
-.page { padding: 24rpx; min-height: 100vh; background: #F5F7FA; }
-.card {
-  background: #fff; border-radius: 16rpx; padding: 24rpx;
-  display: flex; flex-direction: column; gap: 24rpx;
-  box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.04);
+.page {
+  min-height: 100vh;
+  background: #F5F7FA;
+  padding-bottom: 200rpx;
 }
-.row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16rpx 0; border-bottom: 1rpx solid #F0F2F5;
-  &.col { flex-direction: column; align-items: stretch; gap: 12rpx; border-bottom: none; }
-  &:last-child { border-bottom: none; }
-}
-.label { font-size: 28rpx; color: #1F2329; font-weight: 500; }
-.req { color: #F53F3F; }
-.value-wrap { flex: 1; text-align: right; }
-.value { font-size: 28rpx; color: #1F2329; }
-.select-btn { font-size: 24rpx; color: #1677FF; background: #E8F3FF; }
-.textarea {
-  background: #F7F8FA; border-radius: 12rpx; padding: 20rpx;
-  font-size: 28rpx; min-height: 200rpx; width: 100%; box-sizing: border-box;
-}
-.counter { font-size: 22rpx; color: #86909C; text-align: right; }
-.actions { padding: 40rpx 24rpx; }
-.btn-primary {
-  background: #1677FF; color: #fff; border-radius: 48rpx;
-  font-size: 30rpx; height: 88rpx; line-height: 88rpx;
-  transition: opacity 0.15s, transform 0.15s;
-  &:active { opacity: 0.85; transform: scale(0.98); }
-  &[disabled] { background: #C9CDD4; color: #fff; }
-}
-.placeholder { color: #C9CDD4; }
-.arrow {
-  margin-left: 8rpx;
-  display: inline-flex;
-  align-items: center;
+.page-tip {
+  padding: 24rpx 32rpx;
+  font-size: 24rpx;
+  color: #86909C;
 }
 
-/* ===== 客户选择弹层 ===== */
+.section { margin: 0 24rpx 24rpx; }
+.section-title {
+  font-size: 24rpx;
+  color: #86909C;
+  margin: 0 8rpx 12rpx;
+  letter-spacing: 1rpx;
+}
+.section-card {
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 8rpx 24rpx 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(20, 30, 60, 0.04);
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 0;
+  font-size: 28rpx;
+  &.tap:active { opacity: 0.7; }
+}
+.label { width: 200rpx; color: #4E5969; flex-shrink: 0; }
+.req { color: #F53F3F; margin-left: 4rpx; }
+.picker {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6rpx;
+  font-size: 28rpx;
+  color: #1F2329;
+}
+.val { color: #1F2329; }
+.ph { color: #C9CDD4; }
+
+.textarea {
+  width: 100%;
+  margin: 16rpx 0 8rpx;
+  background: #F7F8FA;
+  border-radius: 16rpx;
+  padding: 20rpx;
+  height: 240rpx;
+  font-size: 28rpx;
+  color: #1F2329;
+  box-sizing: border-box;
+}
+.counter-row { text-align: right; }
+.counter { font-size: 22rpx; color: #86909C; }
+
+.submit-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  padding: 16rpx 24rpx 32rpx;
+  background: #ffffff;
+  box-shadow: 0 -4rpx 16rpx rgba(20, 30, 60, 0.05);
+}
+.btn-primary {
+  background: linear-gradient(135deg, #1677FF, #4096FF);
+  color: #ffffff;
+  text-align: center;
+  padding: 28rpx;
+  border-radius: 24rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  letter-spacing: 8rpx;
+  box-shadow: 0 6rpx 20rpx rgba(22, 119, 255, 0.35);
+  transition: transform 0.15s, opacity 0.15s;
+  &:active { transform: scale(0.98); }
+  &.disabled {
+    opacity: 0.6;
+    box-shadow: none;
+    background: #C9CDD4;
+  }
+}
+
 .picker-mask {
   position: fixed;
   inset: 0;
@@ -230,10 +280,10 @@ async function onSubmit() {
 }
 .picker-panel {
   width: 100%;
-  height: 70vh;
+  height: 75vh;
   background: #ffffff;
-  border-top-left-radius: 24rpx;
-  border-top-right-radius: 24rpx;
+  border-top-left-radius: 32rpx;
+  border-top-right-radius: 32rpx;
   display: flex;
   flex-direction: column;
 }
@@ -244,29 +294,32 @@ async function onSubmit() {
   justify-content: space-between;
   border-bottom: 1rpx solid #F2F3F5;
 }
-.picker-title { font-size: 30rpx; font-weight: 600; color: #1F2329; }
+.picker-title { font-size: 30rpx; font-weight: 700; color: #1F2329; }
 .picker-close {
-  padding: 8rpx 12rpx;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
+  width: 56rpx; height: 56rpx;
+  border-radius: 50%;
+  &:active { background: #F2F3F5; }
 }
-
-.picker-search {
-  padding: 16rpx 24rpx;
-  border-bottom: 1rpx solid #F2F3F5;
+.picker-search { padding: 16rpx 24rpx; border-bottom: 1rpx solid #F2F3F5; }
+.picker-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  background: #F2F3F5;
+  border-radius: 24rpx;
+  padding: 0 20rpx;
+  height: 80rpx;
 }
 .picker-input {
+  flex: 1;
   height: 64rpx;
-  background: #F2F3F5;
-  border-radius: 32rpx;
-  padding: 0 24rpx;
   font-size: 26rpx;
+  color: #1F2329;
+  background: transparent;
 }
-
 .picker-list { flex: 1; overflow-y: auto; }
 .picker-state { padding: 64rpx 0; text-align: center; color: #86909C; font-size: 26rpx; }
-
 .picker-item {
   display: flex;
   align-items: center;
@@ -275,13 +328,15 @@ async function onSubmit() {
   &:active { background: #F7F8FA; }
 }
 .pi-avatar {
-  width: 72rpx; height: 72rpx; border-radius: 50%;
-  background: #E8F3FF; color: #1677FF;
+  width: 80rpx; height: 80rpx;
+  border-radius: 20rpx;
+  background: linear-gradient(135deg, #1677FF, #4096FF);
+  color: #ffffff;
   display: flex; align-items: center; justify-content: center;
   font-size: 28rpx; font-weight: 600;
   margin-right: 20rpx; flex-shrink: 0;
 }
 .pi-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.pi-name { font-size: 28rpx; color: #1F2329; }
-.pi-sub { margin-top: 4rpx; font-size: 22rpx; color: #86909C; }
+.pi-name { font-size: 28rpx; color: #1F2329; font-weight: 500; }
+.pi-sub { margin-top: 6rpx; font-size: 22rpx; color: #86909C; }
 </style>

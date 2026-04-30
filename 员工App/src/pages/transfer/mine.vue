@@ -4,28 +4,32 @@
       <empty-state text="还没有提交过转出申请" icon="share-2" />
     </view>
     <view v-else class="list">
-      <view v-for="it in items" :key="it.id" class="card">
+      <view v-for="it in items" :key="it.id" class="item-card">
         <view class="row top">
-          <text class="cust">{{ it.customer_name || `客户#${it.customer_id}` }}</text>
+          <view class="left-info">
+            <text class="cust">{{ it.customer_name || `客户#${it.customer_id}` }}</text>
+            <text class="time">{{ fmtDateTime(it.created_at) }}</text>
+          </view>
           <view class="badge" :class="`b-${it.status}`">{{ statusText(it.status) }}</view>
         </view>
-        <view class="row meta">
-          <text class="time">提交于 {{ fmtDateTime(it.created_at) }}</text>
-        </view>
-        <view v-if="it.to_employee_name" class="row">
-          <text class="lbl">转给</text>
-          <text class="val">{{ it.to_employee_name }}</text>
-        </view>
-        <view class="row">
-          <text class="lbl">原因</text>
-          <text class="val multi">{{ it.reason || '—' }}</text>
-        </view>
-        <view v-if="it.approval_remark" class="row">
-          <text class="lbl">审批备注</text>
-          <text class="val multi">{{ it.approval_remark }}</text>
-        </view>
-        <view v-if="it.approved_at" class="row meta">
-          <text class="time">审批于 {{ fmtDateTime(it.approved_at) }}</text>
+
+        <view class="kv-block">
+          <view v-if="it.to_employee_name" class="kv">
+            <text class="lbl">转给</text>
+            <text class="val">{{ it.to_employee_name }}</text>
+          </view>
+          <view class="kv">
+            <text class="lbl">原因</text>
+            <text class="val multi">{{ it.reason || '—' }}</text>
+          </view>
+          <view v-if="it.approval_remark" class="kv">
+            <text class="lbl">审批备注</text>
+            <text class="val multi">{{ it.approval_remark }}</text>
+          </view>
+          <view v-if="it.approved_at" class="kv">
+            <text class="lbl">审批于</text>
+            <text class="val">{{ fmtDateTime(it.approved_at) }}</text>
+          </view>
         </view>
       </view>
       <view v-if="loading" class="loading-tip">加载中…</view>
@@ -69,9 +73,7 @@ async function fetchPage() {
     hasMore.value = items.value.length < total && list.length > 0
     if (list.length < pageSize) hasMore.value = false
     page.value += 1
-  } catch (e) {
-    // http.ts 已处理
-  } finally {
+  } catch (e) { /* */ } finally {
     loading.value = false
   }
 }
@@ -97,27 +99,80 @@ function statusText(s: string) {
 </script>
 
 <style lang="scss" scoped>
-.page { padding: 24rpx; min-height: 100vh; background: #F5F7FA; }
-.empty-wrap { padding-top: 80rpx; }
-.list { display: flex; flex-direction: column; gap: 20rpx; }
-.card {
-  background: #fff; border-radius: 16rpx; padding: 24rpx;
-  display: flex; flex-direction: column; gap: 12rpx;
-  box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.04);
+.page {
+  min-height: 100vh;
+  background: #F5F7FA;
+  padding: 24rpx;
+  padding-bottom: 80rpx;
 }
-.row { display: flex; align-items: flex-start; gap: 16rpx; }
-.row.top { justify-content: space-between; align-items: center; }
-.cust { font-size: 30rpx; font-weight: 600; color: #1F2329; }
+.empty-wrap { padding-top: 80rpx; }
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+.item-card {
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(20, 30, 60, 0.04);
+}
+.row.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 1rpx solid #F2F3F5;
+  margin-bottom: 16rpx;
+}
+.left-info { flex: 1; min-width: 0; }
+.cust {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1F2329;
+}
+.time {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #86909C;
+}
 .badge {
-  font-size: 22rpx; padding: 4rpx 16rpx; border-radius: 20rpx;
-  &.b-pending { background: #FFF7E8; color: #FF8800; }
-  &.b-approved { background: #E8F5E9; color: #00A65A; }
-  &.b-rejected { background: #FFECEC; color: #F53F3F; }
+  flex-shrink: 0;
+  font-size: 22rpx;
+  padding: 6rpx 18rpx;
+  border-radius: 16rpx;
+  font-weight: 500;
+  &.b-pending { background: #FFF7E6; color: #FA8C16; }
+  &.b-approved { background: #E6F7ED; color: #00B42A; }
+  &.b-rejected { background: #FFECEB; color: #F53F3F; }
   &.b-cancelled { background: #F2F3F5; color: #86909C; }
 }
-.meta .time { font-size: 24rpx; color: #86909C; }
-.lbl { font-size: 26rpx; color: #86909C; min-width: 120rpx; }
-.val { flex: 1; font-size: 26rpx; color: #1F2329; word-break: break-all; }
-.val.multi { line-height: 1.5; }
-.loading-tip { text-align: center; font-size: 24rpx; color: #86909C; padding: 24rpx 0; }
+
+.kv-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+.kv {
+  display: flex;
+  gap: 16rpx;
+  font-size: 26rpx;
+}
+.lbl { width: 120rpx; flex-shrink: 0; color: #86909C; }
+.val {
+  flex: 1;
+  color: #1F2329;
+  word-break: break-all;
+}
+.val.multi { line-height: 1.6; }
+
+.loading-tip {
+  text-align: center;
+  font-size: 24rpx;
+  color: #86909C;
+  padding: 32rpx 0;
+}
 </style>

@@ -5,6 +5,7 @@ const questionnaireRoutes = require('./questionnaire')
 const customerRoutes = require('./customers')
 const childGrantsRoutes = require('./childGrants')
 const aiAnalysisRoutes = require('./aiAnalysis')
+const aiChatRoutes = require('./aiChat')
 const adminFollowUpsRoutes = require('./followUps')
 const { authMiddleware, USER_TYPES } = require('../../utils/jwt')
 const { success } = require('../../utils/response')
@@ -795,6 +796,9 @@ router.use('/', childGrantsRoutes)
 
 // ===== AI 分析：配置 + 孩子分析历史 + 触发生成（路径混合 ai-analysis/* 和 children/:id/analyses）=====
 router.use('/', aiAnalysisRoutes)
+
+// ===== AI 对话（长上下文，admin 私有） =====
+router.use('/', aiChatRoutes)
 
 // ===== 全局跟进日志（超级管理员看所有员工跟进） =====
 router.use('/follow-ups', adminFollowUpsRoutes)

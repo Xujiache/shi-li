@@ -9,7 +9,6 @@ import { onNetworkChange } from '@/utils/network'
 let foregroundPollTimer: any = null
 
 onLaunch(() => {
-  console.log('[App] onLaunch')
   // 路由守卫：未登录跳登录页（不能 await，UniApp 钩子是同步的）
   const auth = useAuthStore()
   auth.bootstrap()
@@ -45,7 +44,6 @@ onLaunch(() => {
 })
 
 onShow(() => {
-  console.log('[App] onShow')
   // 前台 30s 轮询：调 kick(poll)；后台不跑
   if (!foregroundPollTimer) {
     foregroundPollTimer = setInterval(() => {
@@ -59,7 +57,6 @@ onShow(() => {
 })
 
 onHide(() => {
-  console.log('[App] onHide')
   if (foregroundPollTimer) {
     clearInterval(foregroundPollTimer)
     foregroundPollTimer = null

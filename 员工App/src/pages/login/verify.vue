@@ -1,25 +1,49 @@
 <template>
-  <view class="vf-page">
+  <view class="login-page">
+    <view class="bg-deco-1" />
+    <view class="bg-deco-2" />
+
     <view class="brand">
-      <view class="brand-title">异地登录验证</view>
-      <view class="brand-sub">检测到设备/IP 变化，请输入手机收到的验证码</view>
-    </view>
-    <view class="form card">
-      <view class="form-row">
-        <text class="label">手机号</text>
-        <input class="input" type="number" maxlength="11" v-model="phone" placeholder="请输入手机号" />
+      <view class="brand-logo">
+        <svg-icon name="shield-check" :size="64" color="#ffffff" />
       </view>
+      <view class="brand-title">异地登录验证</view>
+      <view class="brand-sub">检测到设备 / IP 变化，请输入手机收到的验证码</view>
+    </view>
+
+    <view class="form-card">
+      <view class="form-title">安全验证</view>
+      <view class="form-tip">为保障账号安全，请完成验证</view>
+
       <view class="form-row">
-        <text class="label">验证码</text>
-        <input class="input" type="number" maxlength="6" v-model="code" placeholder="6 位验证码" />
+        <view class="row-icon"><svg-icon name="phone" :size="32" color="#86909C" /></view>
+        <input
+          class="input"
+          type="number"
+          maxlength="11"
+          v-model="phone"
+          placeholder="请输入手机号"
+        />
+      </view>
+
+      <view class="form-row">
+        <view class="row-icon"><svg-icon name="lock" :size="32" color="#86909C" /></view>
+        <input
+          class="input"
+          type="number"
+          maxlength="6"
+          v-model="code"
+          placeholder="6 位验证码"
+        />
         <view
           class="resend"
           :class="{disabled: countdown > 0}"
           @click="onResend"
         >
-          {{ countdown > 0 ? `${countdown}s 后重发` : '重新发送' }}
+          {{ countdown > 0 ? `${countdown}s` : '重新发送' }}
         </view>
       </view>
+
       <view class="btn-primary" :class="{disabled: loading}" @click="onSubmit">
         {{ loading ? '验证中...' : '确认验证' }}
       </view>
@@ -33,6 +57,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { verifyCode as apiVerifyCode, resendVerifyCode as apiResendVerifyCode } from '@/api/employee'
 import { useAuthStore } from '@/stores/auth'
+import SvgIcon from '@/components/svg-icon.vue'
 
 const phone = ref('')
 const code = ref('')
@@ -45,10 +70,7 @@ onLoad((q: any) => {
   if (q?.phone) phone.value = String(q.phone)
 })
 
-onMounted(() => {
-  // 进入页面默认进入 60s 倒计时（假定上一步已下发过验证码）
-  startCountdown()
-})
+onMounted(() => { startCountdown() })
 
 onUnmounted(() => {
   if (timer) { clearInterval(timer); timer = null }
@@ -75,16 +97,13 @@ async function onResend() {
   }
   try {
     const r: any = await apiResendVerifyCode({ phone: phone.value })
-    // 后端会真实告诉前端是否启用了短信网关
     uni.showToast({
       title: r?.message || (r?.sms_enabled ? '验证码已下发' : '短信网关未配置'),
       icon: 'none',
       duration: 2500
     })
     if (r?.sms_enabled) startCountdown()
-  } catch (e) {
-    // http 拦截器已 toast
-  }
+  } catch (e) { /* */ }
 }
 
 async function onSubmit() {
@@ -117,39 +136,99 @@ async function onSubmit() {
 </script>
 
 <style lang="scss" scoped>
-.vf-page {
+.login-page {
+  position: relative;
   min-height: 100vh;
-  background: linear-gradient(180deg, #1677FF 0%, #4096FF 35%, #F5F7FA 60%);
-  padding: 120rpx 48rpx 48rpx;
+  background: linear-gradient(160deg, #1677FF 0%, #4096FF 40%, #F5F7FA 70%);
+  padding: 140rpx 48rpx 48rpx;
   box-sizing: border-box;
+  overflow: hidden;
 }
-.brand { text-align: center; margin-bottom: 60rpx; color: #ffffff; }
-.brand-title { font-size: 48rpx; font-weight: 600; letter-spacing: 4rpx; }
-.brand-sub { margin-top: 12rpx; opacity: 0.85; font-size: 26rpx; }
-.form {
+.bg-deco-1 {
+  position: absolute;
+  top: -120rpx; right: -180rpx;
+  width: 480rpx; height: 480rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+}
+.bg-deco-2 {
+  position: absolute;
+  top: 240rpx; left: -160rpx;
+  width: 320rpx; height: 320rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.brand {
+  position: relative;
+  text-align: center;
+  margin-bottom: 80rpx;
+  color: #ffffff;
+}
+.brand-logo {
+  width: 128rpx; height: 128rpx;
+  margin: 0 auto 24rpx;
+  border-radius: 32rpx;
+  background: rgba(255, 255, 255, 0.18);
+  border: 2rpx solid rgba(255, 255, 255, 0.3);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.12);
+}
+.brand-title { font-size: 48rpx; font-weight: 700; letter-spacing: 4rpx; }
+.brand-sub { margin-top: 12rpx; opacity: 0.9; font-size: 26rpx; }
+
+.form-card {
+  position: relative;
   background: #ffffff;
-  border-radius: 24rpx;
-  padding: 40rpx 32rpx;
-  box-shadow: 0 4rpx 24rpx rgba(0,0,0,0.06);
+  border-radius: 32rpx;
+  padding: 48rpx 32rpx 40rpx;
+  box-shadow: 0 12rpx 48rpx rgba(20, 30, 60, 0.08);
 }
+.form-title { font-size: 36rpx; font-weight: 700; color: #1F2329; }
+.form-tip { margin-top: 8rpx; font-size: 24rpx; color: #86909C; margin-bottom: 32rpx; }
+
 .form-row {
-  display: flex; align-items: center;
-  border-bottom: 1rpx solid #F2F3F5;
-  padding: 24rpx 0;
+  display: flex;
+  align-items: center;
+  background: #F7F8FA;
+  border-radius: 20rpx;
+  padding: 0 24rpx;
+  margin-top: 16rpx;
+  height: 96rpx;
 }
-.label { width: 130rpx; color: #4E5969; font-size: 28rpx; }
-.input { flex: 1; font-size: 30rpx; color: #1F2329; }
+.row-icon { display: flex; align-items: center; margin-right: 16rpx; flex-shrink: 0; }
+.input { flex: 1; font-size: 30rpx; color: #1F2329; background: transparent; }
 .resend {
-  font-size: 26rpx; color: #1677FF;
+  font-size: 24rpx;
+  color: #1677FF;
   padding: 8rpx 16rpx;
-  &.disabled { color: #C9CDD4; }
+  border-radius: 12rpx;
+  background: #E8F3FF;
+  margin-left: 8rpx;
+  flex-shrink: 0;
+  &:active { opacity: 0.7; }
+  &.disabled { color: #C9CDD4; background: #F2F3F5; }
 }
+
 .btn-primary {
   margin-top: 48rpx;
-  background: #1677FF; color: #ffffff;
-  border-radius: 12rpx; text-align: center;
-  padding: 24rpx 0; font-size: 32rpx;
-  &.disabled { opacity: 0.6; }
+  background: linear-gradient(135deg, #1677FF, #4096FF);
+  color: #ffffff;
+  border-radius: 24rpx;
+  text-align: center;
+  padding: 28rpx 0;
+  font-size: 32rpx;
+  font-weight: 600;
+  letter-spacing: 8rpx;
+  box-shadow: 0 6rpx 20rpx rgba(22, 119, 255, 0.35);
+  transition: transform 0.15s, opacity 0.15s;
+  &:active { transform: scale(0.98); opacity: 0.95; }
+  &.disabled { opacity: 0.6; box-shadow: none; }
 }
-.hint { margin-top: 24rpx; text-align: center; color: #86909C; font-size: 22rpx; }
+.hint {
+  margin-top: 24rpx;
+  text-align: center;
+  color: #86909C;
+  font-size: 22rpx;
+}
 </style>

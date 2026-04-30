@@ -1,51 +1,73 @@
 <template>
-  <view class="settings-page">
-    <!-- 通知开关 -->
-    <view class="card section">
+  <view class="page">
+    <view class="section">
       <view class="section-title">消息通知</view>
-      <view class="row">
-        <text class="row-label">跟进提醒</text>
-        <switch :checked="notif.follow_up" color="#1677FF" @change="onToggle('follow_up', $event)" />
-      </view>
-      <view class="row">
-        <text class="row-label">转入提醒</text>
-        <switch :checked="notif.transfer" color="#1677FF" @change="onToggle('transfer', $event)" />
-      </view>
-      <view class="row">
-        <text class="row-label">公告提醒</text>
-        <switch :checked="notif.announcement" color="#1677FF" @change="onToggle('announcement', $event)" />
-      </view>
-    </view>
-
-    <!-- 缓存 -->
-    <view class="card section">
-      <view class="section-title">存储</view>
-      <view class="row tap" @click="onClearCache">
-        <text class="row-label">清除缓存</text>
-        <text class="row-extra">{{ cacheSize }}</text>
-        <view class="row-arrow">
-          <svg-icon name="chevron-right" :size="28" color="#C9CDD4" />
+      <view class="section-card">
+        <view class="row">
+          <view class="row-icon mi-orange">
+            <svg-icon name="alarm-clock" :size="28" color="#FA8C16" />
+          </view>
+          <view class="row-text">
+            <text class="row-label">跟进提醒</text>
+            <text class="row-hint">客户到期跟进时弹窗推送</text>
+          </view>
+          <switch :checked="notif.follow_up" color="#1677FF" @change="onToggle('follow_up', $event)" />
+        </view>
+        <view class="row">
+          <view class="row-icon mi-blue">
+            <svg-icon name="users" :size="28" color="#1677FF" />
+          </view>
+          <view class="row-text">
+            <text class="row-label">转入提醒</text>
+            <text class="row-hint">同事将客户转给你时通知</text>
+          </view>
+          <switch :checked="notif.transfer" color="#1677FF" @change="onToggle('transfer', $event)" />
+        </view>
+        <view class="row">
+          <view class="row-icon mi-purple">
+            <svg-icon name="bell" :size="28" color="#722ED1" />
+          </view>
+          <view class="row-text">
+            <text class="row-label">公告提醒</text>
+            <text class="row-hint">系统公告与重要通知</text>
+          </view>
+          <switch :checked="notif.announcement" color="#1677FF" @change="onToggle('announcement', $event)" />
         </view>
       </view>
     </view>
 
-    <!-- 关于 -->
-    <view class="card section">
-      <view class="section-title">关于</view>
-      <view class="row">
-        <text class="row-label">版本号</text>
-        <text class="row-value">{{ appVersion }}</text>
-      </view>
-      <view class="row">
-        <text class="row-label">公司</text>
-        <text class="row-value">视力健康管理平台</text>
-      </view>
-      <view class="about-text">
-        本应用由公司内部研发，仅供内部员工使用。如有问题请联系管理员。
+    <view class="section">
+      <view class="section-title">存储</view>
+      <view class="section-card">
+        <view class="row tap" @click="onClearCache">
+          <view class="row-icon mi-gray">
+            <svg-icon name="refresh-cw" :size="28" color="#4E5969" />
+          </view>
+          <view class="row-text">
+            <text class="row-label">清除缓存</text>
+            <text class="row-hint">登录态会保留</text>
+          </view>
+          <text class="row-extra">{{ cacheSize }}</text>
+          <svg-icon name="chevron-right" :size="22" color="#C9CDD4" />
+        </view>
       </view>
     </view>
 
-    <!-- 退出登录 -->
+    <view class="section">
+      <view class="section-title">关于</view>
+      <view class="section-card">
+        <view class="row">
+          <text class="row-label">版本号</text>
+          <text class="row-extra">{{ appVersion }}</text>
+        </view>
+        <view class="row">
+          <text class="row-label">公司</text>
+          <text class="row-extra">视力健康管理平台</text>
+        </view>
+      </view>
+      <view class="about-text">本应用由公司内部研发，仅供内部员工使用。如有问题请联系管理员。</view>
+    </view>
+
     <view class="logout-wrap">
       <view class="btn-logout" @click="onLogout">退出登录</view>
     </view>
@@ -56,6 +78,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { logout } from '@/api/employee'
+import SvgIcon from '@/components/svg-icon.vue'
 
 const auth = useAuthStore()
 
@@ -82,12 +105,9 @@ const appVersion = ref('v1.0.0')
 function loadNotif() {
   try {
     const v = uni.getStorageSync(NOTIF_KEY)
-    if (v && typeof v === 'object') {
-      Object.assign(notif, v)
-    } else if (typeof v === 'string' && v) {
-      try {
-        Object.assign(notif, JSON.parse(v))
-      } catch {}
+    if (v && typeof v === 'object') Object.assign(notif, v)
+    else if (typeof v === 'string' && v) {
+      try { Object.assign(notif, JSON.parse(v)) } catch {}
     }
   } catch {}
 }
@@ -104,7 +124,7 @@ function onToggle(key: keyof NotifSettings, e: any) {
 function refreshCacheSize() {
   try {
     const info = uni.getStorageInfoSync()
-    const size = info?.currentSize ?? 0 // KB
+    const size = info?.currentSize ?? 0
     cacheSize.value = size > 1024 ? `${(size / 1024).toFixed(1)} MB` : `${size} KB`
   } catch {
     cacheSize.value = ''
@@ -140,11 +160,7 @@ function onLogout() {
     content: '确定要退出登录吗？',
     success: async (r) => {
       if (!r.confirm) return
-      try {
-        await logout()
-      } catch (e) {
-        // 忽略后端错误，强制清本地
-      }
+      try { await logout() } catch (e) { /* */ }
       auth.clear()
       uni.reLaunch({ url: '/pages/login/login' })
     }
@@ -155,12 +171,8 @@ function readVersion() {
   try {
     const sys: any = uni.getSystemInfoSync()
     const v = sys?.appVersion || sys?.appWgtVersion
-    if (v) {
-      appVersion.value = String(v).startsWith('v') ? String(v) : `v${v}`
-    }
-  } catch {
-    // keep default
-  }
+    if (v) appVersion.value = String(v).startsWith('v') ? String(v) : `v${v}`
+  } catch { /* */ }
 }
 
 onMounted(() => {
@@ -171,82 +183,97 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.settings-page {
-  padding: 24rpx;
+.page {
   min-height: 100vh;
+  background: #F5F7FA;
+  padding-bottom: 80rpx;
 }
 
-.section {
-  padding: 0;
-  border-radius: 16rpx;
-  box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.04);
-  overflow: hidden;
-  margin-bottom: 16rpx;
-}
+.section { margin: 24rpx 24rpx 0; }
 .section-title {
   font-size: 24rpx;
   color: #86909C;
-  padding: 20rpx 24rpx 8rpx;
+  margin: 0 8rpx 12rpx;
+  letter-spacing: 1rpx;
 }
+.section-card {
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 0 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(20, 30, 60, 0.04);
+}
+
 .row {
+  position: relative;
   display: flex;
   align-items: center;
-  padding: 24rpx;
-  border-top: 1rpx solid #F2F3F5;
-  position: relative;
-
-  &:first-of-type {
-    border-top: none;
+  gap: 16rpx;
+  padding: 24rpx 0;
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 88rpx;
+    right: 0;
+    height: 1rpx;
+    background: #F2F3F5;
   }
+  &:last-child::after { display: none; }
+  &.tap:active { background: #F8F9FB; }
 }
-.row.tap:active {
-  background: #F7F8FA;
+.row-icon {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.mi-blue { background: #E8F3FF; }
+.mi-orange { background: #FFF4E6; }
+.mi-purple { background: #F4ECFF; }
+.mi-gray { background: #F2F3F5; }
+.row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 .row-label {
-  flex: 1;
   font-size: 28rpx;
   color: #1F2329;
+  font-weight: 500;
+}
+.row-hint {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: #86909C;
 }
 .row-extra {
   font-size: 24rpx;
   color: #86909C;
-  margin-right: 8rpx;
-}
-.row-value {
-  font-size: 26rpx;
-  color: #4E5969;
-}
-.row-arrow {
-  margin-left: 4rpx;
-  display: flex;
-  align-items: center;
 }
 
 .about-text {
-  font-size: 24rpx;
+  margin-top: 12rpx;
+  padding: 0 8rpx;
+  font-size: 22rpx;
   color: #86909C;
-  padding: 16rpx 24rpx 24rpx;
   line-height: 1.6;
 }
 
-.logout-wrap {
-  margin-top: 32rpx;
-}
+.logout-wrap { margin: 32rpx 24rpx 0; }
 .btn-logout {
   background: #ffffff;
-  color: #FF4D4F;
-  border-radius: 16rpx;
-  padding: 28rpx 0;
+  color: #F53F3F;
+  border-radius: 24rpx;
+  padding: 30rpx 0;
   text-align: center;
   font-size: 30rpx;
   font-weight: 500;
-  box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.04);
-  transition: opacity 0.15s, transform 0.15s, background 0.15s;
-
-  &:active {
-    background: #FFF1F0;
-    opacity: 0.85;
-    transform: scale(0.98);
-  }
+  box-shadow: 0 2rpx 12rpx rgba(20, 30, 60, 0.04);
+  transition: all 0.15s;
+  &:active { background: #FFF1F0; transform: scale(0.99); }
 }
 </style>

@@ -7,6 +7,7 @@ const { success } = require('../../utils/response')
 const { asyncRoute } = require('../../utils/asyncRoute')
 const { isSuperAdmin } = require('../middlewares/permission')
 const { logAdminAction } = require('../../middlewares/adminLog')
+const { aiBulkLimiter } = require('../../middlewares/rateLimit')
 const aiAnalysisService = require('../../services/aiAnalysisService')
 
 router.get(
@@ -70,6 +71,37 @@ router.delete(
   asyncRoute(async (req, res) => {
     const result = await aiAnalysisService.deactivateAnalysis(req.params.id)
     success(res, result, '已撤回')
+  })
+)
+
+router.post(
+  '/ai-analysis/bulk-generate',
+  isSuperAdmin,
+  aiBulkLimiter,
+  logAdminAction('generate', 'ai_bulk_analyses'),
+  asyncRoute(async (req, res) => {
+    const result = await aiAnalysisService.bulkGenerateAiAnalyses({
+      trigger: 'manual_admin',
+      interval_ms: req.body && req.body.interval_ms,
+      limit: req.body && req.body.limit
+    })
+    success(res, result, result.status === 'started' ? `已启动批量生成 ${result.total} 个孩子` : '操作完成')
+  })
+)
+
+router.get(
+  '/ai-analysis/bulk-status',
+  asyncRoute(async (req, res) => {
+    const state = aiAnalysisService.getBulkStatus()
+    success(res, { state })
+  })
+)
+
+router.get(
+  '/ai-analysis/overview',
+  asyncRoute(async (req, res) => {
+    const stats = await aiAnalysisService.getOverviewStats()
+    success(res, { stats })
   })
 )
 

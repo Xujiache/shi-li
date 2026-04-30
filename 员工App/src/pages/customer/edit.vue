@@ -1,51 +1,86 @@
 <template>
-  <view class="page">
-    <view class="card" v-if="loaded">
-      <view class="row">
-        <text class="label">姓名 *</text>
-        <input class="input" v-model="form.display_name" placeholder="请输入姓名" />
+  <view class="page" v-if="loaded">
+    <view class="page-tip">编辑客户资料，*为必填</view>
+
+    <view class="section">
+      <view class="section-title">基本资料</view>
+      <view class="section-card">
+        <view class="form-row">
+          <text class="label">姓名 <text class="req">*</text></text>
+          <input class="input" v-model="form.display_name" placeholder="请输入姓名" />
+        </view>
+        <view class="form-row">
+          <text class="label">手机号 <text class="req">*</text></text>
+          <input class="input" type="number" v-model="form.phone" placeholder="请输入手机号" maxlength="11" />
+        </view>
+        <view class="form-row">
+          <text class="label">性别</text>
+          <picker mode="selector" :value="genderIdx" :range="genderOptions" range-key="label" @change="(e) => genderIdx = e.detail.value">
+            <view class="picker">
+              <text>{{ genderOptions[genderIdx].label }}</text>
+              <svg-icon name="chevron-right" :size="22" color="#C9CDD4" />
+            </view>
+          </picker>
+        </view>
+        <view class="form-row">
+          <text class="label">年龄</text>
+          <input class="input" type="number" v-model="form.age" placeholder="请输入年龄" />
+        </view>
       </view>
-      <view class="row">
-        <text class="label">手机号 *</text>
-        <input class="input" type="number" v-model="form.phone" placeholder="请输入手机号" maxlength="11" />
+    </view>
+
+    <view class="section">
+      <view class="section-title">学校信息</view>
+      <view class="section-card">
+        <view class="form-row">
+          <text class="label">学校</text>
+          <input class="input" v-model="form.school" placeholder="请输入学校" />
+        </view>
+        <view class="form-row">
+          <text class="label">班级</text>
+          <input class="input" v-model="form.class_name" placeholder="请输入班级" />
+        </view>
+        <view class="form-row">
+          <text class="label">来源</text>
+          <input class="input" v-model="form.source" placeholder="如：抖音 / 转介绍" />
+        </view>
       </view>
-      <view class="row">
-        <text class="label">性别</text>
-        <picker class="input" mode="selector" :value="genderIdx" :range="genderOptions" range-key="label" @change="(e) => genderIdx = e.detail.value">
-          <text>{{ genderOptions[genderIdx].label }}</text>
-        </picker>
+    </view>
+
+    <view class="section">
+      <view class="section-title">状态与等级</view>
+      <view class="section-card">
+        <view class="seg-row">
+          <text class="seg-label">状态</text>
+          <view class="seg-chips">
+            <view
+              v-for="(s, i) in statusOptions"
+              :key="s.value"
+              class="seg-chip"
+              :class="{ [`seg-${s.tone}`]: statusIdx === i }"
+              @click="statusIdx = i"
+            >{{ s.label }}</view>
+          </view>
+        </view>
+        <view class="seg-row">
+          <text class="seg-label">等级</text>
+          <view class="seg-chips">
+            <view
+              v-for="(l, i) in levelOptions"
+              :key="l.value"
+              class="seg-chip"
+              :class="{ [`level-${l.value}`]: levelIdx === i }"
+              @click="levelIdx = i"
+            >{{ l.label }}</view>
+          </view>
+        </view>
       </view>
-      <view class="row">
-        <text class="label">年龄</text>
-        <input class="input" type="number" v-model="form.age" placeholder="请输入年龄" />
-      </view>
-      <view class="row">
-        <text class="label">学校</text>
-        <input class="input" v-model="form.school" placeholder="请输入学校" />
-      </view>
-      <view class="row">
-        <text class="label">班级</text>
-        <input class="input" v-model="form.class_name" placeholder="请输入班级" />
-      </view>
-      <view class="row">
-        <text class="label">来源</text>
-        <input class="input" v-model="form.source" placeholder="如：抖音 / 转介绍" />
-      </view>
-      <view class="row">
-        <text class="label">状态</text>
-        <picker class="input" mode="selector" :value="statusIdx" :range="statusOptions" range-key="label" @change="(e) => statusIdx = e.detail.value">
-          <text>{{ statusOptions[statusIdx].label }}</text>
-        </picker>
-      </view>
-      <view class="row">
-        <text class="label">等级</text>
-        <picker class="input" mode="selector" :value="levelIdx" :range="levelOptions" range-key="label" @change="(e) => levelIdx = e.detail.value">
-          <text>{{ levelOptions[levelIdx].label }}</text>
-        </picker>
-      </view>
-      <view class="row col">
-        <text class="label">标签</text>
-        <view class="chips">
+    </view>
+
+    <view class="section">
+      <view class="section-title">客户标签</view>
+      <view class="section-card">
+        <view class="chip-pool">
           <text
             v-for="t in tagPool"
             :key="t"
@@ -55,15 +90,18 @@
           >{{ t }}</text>
         </view>
       </view>
-      <view class="row col">
-        <text class="label">备注</text>
-        <textarea class="textarea" v-model="form.remark" placeholder="请输入备注" />
+    </view>
+
+    <view class="section">
+      <view class="section-title">备注</view>
+      <view class="section-card">
+        <textarea class="textarea" v-model="form.remark" placeholder="请输入备注（选填）" maxlength="500" />
       </view>
     </view>
 
     <view class="submit-bar">
       <view class="btn-primary" :class="{ disabled: submitting }" @click="onSubmit">
-        {{ submitting ? '提交中...' : '保存' }}
+        {{ submitting ? '保存中...' : '保 存' }}
       </view>
     </view>
   </view>
@@ -75,6 +113,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import * as customerApi from '@/api/customer'
 import { useCustomersStore } from '@/stores/customers'
 import { v4 } from '@/utils/uuid'
+import SvgIcon from '@/components/svg-icon.vue'
 
 const customersStore = useCustomersStore()
 
@@ -85,10 +124,10 @@ const genderOptions = [
   { label: '其他', value: 'other' }
 ]
 const statusOptions = [
-  { label: '潜在', value: 'potential' },
-  { label: '意向', value: 'interested' },
-  { label: '成交', value: 'signed' },
-  { label: '流失', value: 'lost' }
+  { label: '潜在', value: 'potential', tone: 'gray' },
+  { label: '意向', value: 'interested', tone: 'orange' },
+  { label: '成交', value: 'signed', tone: 'green' },
+  { label: '流失', value: 'lost', tone: 'red' }
 ]
 const levelOptions = [
   { label: 'C', value: 'C' },
@@ -196,79 +235,90 @@ onLoad((q: any) => {
 </script>
 
 <style lang="scss" scoped>
-.page { padding: 16rpx; padding-bottom: 160rpx; }
-
-.card {
-  background: #FFFFFF;
-  border-radius: 16rpx;
-  padding: 8rpx 24rpx;
-  box-shadow: 0 1rpx 4rpx rgba(0,0,0,0.04);
-  margin-bottom: 16rpx;
+.page {
+  min-height: 100vh;
+  background: #F5F7FA;
+  padding-bottom: 200rpx;
 }
-.row {
+.page-tip {
+  padding: 24rpx 32rpx;
+  font-size: 24rpx;
+  color: #86909C;
+}
+.section { margin: 0 24rpx 24rpx; }
+.section-title {
+  font-size: 24rpx;
+  color: #86909C;
+  margin: 0 8rpx 12rpx;
+  letter-spacing: 1rpx;
+}
+.section-card {
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 8rpx 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(20, 30, 60, 0.04);
+}
+.form-row {
   display: flex;
   align-items: center;
-  padding: 20rpx 0;
+  padding: 24rpx 0;
   border-bottom: 1rpx solid #F2F3F5;
   font-size: 28rpx;
   &:last-child { border-bottom: none; }
-  &.col { flex-direction: column; align-items: flex-start; }
 }
-.label {
-  width: 160rpx;
-  color: #86909C;
-  flex-shrink: 0;
+.label { width: 160rpx; color: #4E5969; font-size: 28rpx; flex-shrink: 0; }
+.req { color: #F53F3F; margin-left: 4rpx; }
+.input { flex: 1; font-size: 28rpx; color: #1F2329; text-align: right; background: transparent; }
+.picker { flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 6rpx; font-size: 28rpx; color: #1F2329; }
+.seg-row { padding: 24rpx 0; border-bottom: 1rpx solid #F2F3F5; &:last-child { border-bottom: none; } }
+.seg-label { font-size: 28rpx; color: #4E5969; display: block; margin-bottom: 16rpx; }
+.seg-chips { display: flex; gap: 12rpx; flex-wrap: wrap; }
+.seg-chip {
+  padding: 12rpx 32rpx;
+  border-radius: 24rpx;
+  background: #F2F3F5;
+  font-size: 26rpx;
+  color: #4E5969;
+  transition: all 0.15s;
+  &:active { opacity: 0.8; }
 }
-.input {
-  flex: 1;
-  font-size: 28rpx;
-  color: #1F2329;
+.seg-gray { background: #4E5969 !important; color: #fff !important; }
+.seg-orange { background: #FA8C16 !important; color: #fff !important; }
+.seg-green { background: #00B42A !important; color: #fff !important; }
+.seg-red { background: #F53F3F !important; color: #fff !important; }
+.level-A { background: #F53F3F !important; color: #fff !important; }
+.level-B { background: #FA8C16 !important; color: #fff !important; }
+.level-C { background: #1677FF !important; color: #fff !important; }
+.chip-pool { display: flex; flex-wrap: wrap; gap: 12rpx; padding: 24rpx 0; }
+.chip {
+  background: #F2F3F5; color: #4E5969;
+  padding: 10rpx 22rpx; border-radius: 24rpx;
+  font-size: 24rpx; transition: all 0.15s;
+  &:active { transform: scale(0.96); }
+  &.active { background: #1677FF; color: #ffffff; }
 }
 .textarea {
-  width: 100%;
-  margin-top: 12rpx;
-  background: #F7F8FA;
-  border-radius: 8rpx;
-  padding: 16rpx;
-  height: 160rpx;
-  font-size: 28rpx;
+  width: 100%; margin: 16rpx 0;
+  background: #F7F8FA; border-radius: 16rpx;
+  padding: 20rpx; height: 180rpx;
+  font-size: 28rpx; color: #1F2329;
+  box-sizing: border-box;
 }
-.chips {
-  margin-top: 12rpx;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12rpx;
-}
-.chip {
-  background: #F2F3F5;
-  color: #4E5969;
-  padding: 8rpx 20rpx;
-  border-radius: 24rpx;
-  font-size: 24rpx;
-  transition: transform 0.15s ease;
-  &:active { transform: scale(0.96); }
-  &.active {
-    background: #1677FF;
-    color: #ffffff;
-  }
-}
-
 .submit-bar {
   position: fixed;
   bottom: 0; left: 0; right: 0;
-  padding: 16rpx 24rpx;
+  padding: 16rpx 24rpx 32rpx;
   background: #ffffff;
-  border-top: 1rpx solid #F2F3F5;
+  box-shadow: 0 -4rpx 16rpx rgba(20, 30, 60, 0.05);
 }
 .btn-primary {
-  background: #1677FF;
-  color: #ffffff;
-  text-align: center;
-  padding: 24rpx;
-  border-radius: 12rpx;
-  font-size: 30rpx;
-  transition: transform 0.15s ease;
+  background: linear-gradient(135deg, #1677FF, #4096FF);
+  color: #ffffff; text-align: center;
+  padding: 28rpx; border-radius: 24rpx;
+  font-size: 32rpx; font-weight: 600; letter-spacing: 8rpx;
+  box-shadow: 0 6rpx 20rpx rgba(22, 119, 255, 0.35);
+  transition: transform 0.15s, opacity 0.15s;
   &:active { transform: scale(0.98); }
-  &.disabled { opacity: 0.6; }
+  &.disabled { opacity: 0.6; box-shadow: none; }
 }
 </style>

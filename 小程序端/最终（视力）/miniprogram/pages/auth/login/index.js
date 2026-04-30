@@ -48,11 +48,12 @@ Page({
   },
   
   checkRememberedUser() {
+    // 安全：仅记忆手机号和协议同意状态，不记忆密码（明文存储有泄露风险）
     const remembered = wx.getStorageSync('remembered_user')
     if (remembered) {
       this.setData({
-        phone: remembered.phone,
-        password: remembered.password,
+        phone: remembered.phone || '',
+        password: '',
         rememberLogin: true,
         agreed: Boolean(remembered.agreed)
       })
@@ -60,42 +61,10 @@ Page({
   },
 
   async autoLoginIfRemembered() {
+    // 安全：去掉了密码自动登录。如需"免重复登录"，应基于服务端 refresh token 续期，
+    // 而不是把明文密码缓存在 wx storage（越狱设备/devtools 可见）。
     if (this.data.autoLoginTried) return
-
-    const skip = wx.getStorageSync('skip_auto_login_once')
-    if (skip) {
-      wx.removeStorageSync('skip_auto_login_once')
-      this.setData({ autoLoginTried: true })
-      return
-    }
-
-    const remembered = wx.getStorageSync('remembered_user')
-    if (!remembered || !remembered.phone || !remembered.password) {
-      this.setData({ autoLoginTried: true })
-      return
-    }
-
-    this.setData({ autoLoginTried: true, agreed: true, rememberLogin: true })
-    wx.removeStorageSync('current_user_id')
-    wx.showLoading({ title: '自动登录中...' })
-    try {
-      const res = await loginMobile({ phone: remembered.phone, password: remembered.password })
-      wx.hideLoading()
-      if (res && res.user && res.user._id) {
-        const user = res.user
-        if (res.token) setAuthToken(res.token)
-        app.globalData.userInfo = user
-        app.globalData.currentChild = null
-        wx.setStorageSync('current_user_id', String(user._id))
-        wx.removeStorageSync('current_child_id')
-        this.checkProfile()
-        return
-      }
-      wx.removeStorageSync('remembered_user')
-    } catch (e) {
-      wx.hideLoading()
-      wx.removeStorageSync('remembered_user')
-    }
+    this.setData({ autoLoginTried: true })
   },
   
   onRememberChange(e) {
@@ -263,9 +232,9 @@ Page({
       }
 
       if (this.data.rememberLogin) {
+        // 安全：只记手机号和同意协议状态，绝不存密码
         wx.setStorageSync('remembered_user', {
           phone: this.data.phone,
-          password: this.data.password,
           agreed: true
         })
       } else {

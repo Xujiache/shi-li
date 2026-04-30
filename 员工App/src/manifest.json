@@ -49,11 +49,11 @@
         },
         "publicPath" : "/employee/",
         "devServer" : {
-            "port" : 5173,
+            "port" : 5174,
             "https" : false,
             "proxy" : {
                 "/api" : {
-                    "target" : "http://127.0.0.1:3100",
+                    "target" : "http://127.0.0.1:3000",
                     "changeOrigin" : true,
                     "secure" : false
                 }

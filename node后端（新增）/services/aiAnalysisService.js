@@ -47,7 +47,7 @@ async function getConfig() {
   return Object.assign({}, DEFAULT_CONFIG, parsed || {})
 }
 
-/** 更新 AI 分析配置。 */
+/** 更新 AI 分析配置。从 human → ai 时自动触发批量生成。 */
 async function setConfig(patch = {}) {
   const cur = await getConfig()
   const next = {
@@ -72,7 +72,108 @@ async function setConfig(patch = {}) {
       [CONFIG_KEY, safeJsonStringify(next)]
     )
   }
+
+  if (cur.mode !== 'ai' && next.mode === 'ai') {
+    setImmediate(() => {
+      bulkGenerateAiAnalyses({ trigger: 'mode_switch' }).catch((err) => {
+        logger.warn('bulkGenerateAiAnalyses(mode_switch) failed: ' + (err && err.message))
+      })
+    })
+  }
   return next
+}
+
+// ============ 批量生成 AI 分析 ============
+
+const bulkState = {
+  running: false,
+  startedAt: null,
+  finishedAt: null,
+  trigger: null,
+  total: 0,
+  done: 0,
+  ok: 0,
+  failed: 0,
+  errors: []
+}
+
+function getBulkStatus() {
+  return { ...bulkState, errors: bulkState.errors.slice(-10) }
+}
+
+async function pickChildrenNeedingAi(limit = 1000) {
+  const safeLimit = Math.max(1, Math.min(Number(limit) || 1000, 5000))
+  const rows = await query(
+    `SELECT c.id
+     FROM children c
+     LEFT JOIN child_ai_analysis a
+       ON a.child_id = c.id AND a.active = 1
+     WHERE c.active = 1 AND a.id IS NULL
+     ORDER BY c.id ASC
+     LIMIT ${safeLimit}`
+  )
+  return rows.map((r) => Number(r.id))
+}
+
+/**
+ * 批量给「无任何 active 分析」的孩子生成 AI 报告。
+ *  - in-flight 锁：同时只跑一次
+ *  - 限速：每个孩子之间默认 sleep 1.5s
+ *  - 单孩子失败不中断整体
+ */
+async function bulkGenerateAiAnalyses(opts = {}) {
+  if (bulkState.running) {
+    return { status: 'already_running', state: getBulkStatus() }
+  }
+  if (!config.ai.base || !config.ai.apiKey) {
+    return { status: 'ai_not_configured' }
+  }
+
+  const intervalMs = Math.max(0, Math.min(Number(opts.interval_ms) || 1500, 30000))
+  const limit = Math.max(1, Math.min(Number(opts.limit) || 1000, 5000))
+  const childIds = await pickChildrenNeedingAi(limit)
+
+  Object.assign(bulkState, {
+    running: true,
+    startedAt: new Date(),
+    finishedAt: null,
+    trigger: opts.trigger || 'manual',
+    total: childIds.length,
+    done: 0,
+    ok: 0,
+    failed: 0,
+    errors: []
+  })
+  logger.info(`bulkGenerateAiAnalyses 启动 trigger=${bulkState.trigger} total=${childIds.length}`)
+
+  ;(async () => {
+    for (const cid of childIds) {
+      try {
+        await generateAiAnalysis(cid)
+        bulkState.ok += 1
+      } catch (err) {
+        bulkState.failed += 1
+        bulkState.errors.push({
+          child_id: cid,
+          message: String((err && err.message) || err).slice(0, 300)
+        })
+        logger.warn(`bulk gen child ${cid} failed: ${err && err.message}`)
+      }
+      bulkState.done += 1
+      if (intervalMs > 0 && bulkState.done < childIds.length) {
+        await new Promise((r) => setTimeout(r, intervalMs))
+      }
+    }
+    bulkState.running = false
+    bulkState.finishedAt = new Date()
+    logger.info(`bulkGenerateAiAnalyses 完成 ok=${bulkState.ok} failed=${bulkState.failed}`)
+  })().catch((err) => {
+    bulkState.running = false
+    bulkState.finishedAt = new Date()
+    logger.error('bulkGenerateAiAnalyses crashed: ' + (err && err.stack || err))
+  })
+
+  return { status: 'started', total: childIds.length }
 }
 
 /** 安全输出一条分析记录。 */
@@ -369,7 +470,8 @@ async function distillStylePackContent(model) {
     model: model || (await getConfig()).model,
     messages,
     max_tokens: 1200,
-    temperature: 0.3
+    temperature: 0.3,
+    actor: { type: 'system', id: 0 } // 风格包蒸馏归为 system 配额（不限）
   })
   return {
     content: result.content,
@@ -415,7 +517,7 @@ async function regenerateStylePack(opts = {}) {
 
 let lastDistillAttemptAt = 0
 let distillInFlight = false
-const DISTILL_DEBOUNCE_MS = 60 * 1000
+const DISTILL_DEBOUNCE_MS = 60 * 60 * 1000  // 1 小时（避免频繁触发烧 token，最多每天 24 次）
 
 function maybeRegenerateStylePackAsync() {
   const now = Date.now()
@@ -562,11 +664,18 @@ async function doGenerateAiAnalysis(cid, opts = {}) {
 
   let result
   try {
+    // 谁触发的：admin 手动 generate / employee 浏览 / system 批量
+    const actor = opts.actor_admin_id
+      ? { type: 'admin', id: Number(opts.actor_admin_id) }
+      : opts.actor_employee_id
+        ? { type: 'employee', id: Number(opts.actor_employee_id) }
+        : { type: 'system', id: 0 }
     result = await chatCompletion({
       model: cfg.model,
       messages,
       max_tokens: 600,
-      temperature: 0.7
+      temperature: 0.7,
+      actor
     })
   } catch (err) {
     logger.warn('generateAiAnalysis failed for child ' + cid + ': ' + (err && err.message))
@@ -595,7 +704,8 @@ async function doGenerateAiAnalysis(cid, opts = {}) {
 }
 
 /** 根据原始 AI 与修订稿，实时生成追问提示与候选项。 */
-async function generateCorrectionPrompt({ child_id, analysis_id, edited_content }) {
+async function generateCorrectionPrompt({ child_id, analysis_id, edited_content, employee_id, admin_id }) {
+  const opts = { actor_employee_id: employee_id, actor_admin_id: admin_id }
   const cid = Number(child_id)
   const aid = Number(analysis_id)
   const edited = String(edited_content || '').trim()
@@ -646,7 +756,12 @@ async function generateCorrectionPrompt({ child_id, analysis_id, edited_content 
       model: (await getConfig()).model,
       messages,
       max_tokens: 320,
-      temperature: 0.4
+      temperature: 0.4,
+      actor: opts && opts.actor_employee_id
+        ? { type: 'employee', id: Number(opts.actor_employee_id) }
+        : opts && opts.actor_admin_id
+          ? { type: 'admin', id: Number(opts.actor_admin_id) }
+          : { type: 'system', id: 0 }
     })
     const parsed = extractJsonObject(result.content)
     if (!parsed || typeof parsed !== 'object') {
@@ -962,11 +1077,74 @@ async function getLatestCorrectionAnalysisForAi(analysisId) {
   return safeAnalysis(row)
 }
 
-/** 员工端优先显示最近一次 AI 修订版；否则回退到常规 current。 */
-async function getEmployeeDisplayAnalysis(childId) {
-  const current = await getDisplayAnalysis(childId, { allow_generate: false })
+/** 员工端优先显示最近一次 AI 修订版；否则回退到常规 current。
+ *  AI 模式下 allow_generate=true：员工首次打开档案自动触发 GPT 生成；
+ *  - stale_hours 缓存 + generationLocks 防重复
+ *  - actor=employee：受每日 token 配额保护（单员工上限）
+ */
+async function getEmployeeDisplayAnalysis(childId, opts = {}) {
+  const current = await getDisplayAnalysis(childId, {
+    allow_generate: true,
+    actor_employee_id: opts.employee_id
+  })
   if (!current || current.source !== 'ai') return current
   return (await getLatestCorrectionAnalysisForAi(current.id)) || current
+}
+
+/** 后台仪表盘用：聚合 AI 分析体系的关键指标。 */
+async function getOverviewStats() {
+  const [
+    humanActiveRow,
+    aiActiveRow,
+    humanTotalRow,
+    aiTotalRow,
+    aiTokenRow,
+    correctionRow,
+    childWithAnalysisRow,
+    activePackRow,
+    packCountRow,
+    last7Row
+  ] = await Promise.all([
+    queryOne(`SELECT COUNT(*) AS n FROM child_ai_analysis WHERE active = 1 AND source = 'human'`),
+    queryOne(`SELECT COUNT(*) AS n FROM child_ai_analysis WHERE active = 1 AND source = 'ai'`),
+    queryOne(`SELECT COUNT(*) AS n FROM child_ai_analysis WHERE source = 'human'`),
+    queryOne(`SELECT COUNT(*) AS n FROM child_ai_analysis WHERE source = 'ai'`),
+    queryOne(`SELECT COALESCE(SUM(tokens_used), 0) AS n FROM child_ai_analysis WHERE source = 'ai' AND tokens_used IS NOT NULL`),
+    queryOne(`SELECT COUNT(*) AS n FROM ai_analysis_corrections`),
+    queryOne(`SELECT COUNT(DISTINCT child_id) AS n FROM child_ai_analysis WHERE active = 1`),
+    queryOne(`SELECT version, based_on_count, created_at FROM ai_style_pack WHERE active = 1 ORDER BY id DESC LIMIT 1`),
+    queryOne(`SELECT COUNT(*) AS n FROM ai_style_pack`),
+    queryOne(`SELECT
+                SUM(CASE WHEN source = 'ai' AND created_at >= NOW() - INTERVAL 7 DAY THEN 1 ELSE 0 END) AS ai_recent,
+                SUM(CASE WHEN source = 'human' AND created_at >= NOW() - INTERVAL 7 DAY THEN 1 ELSE 0 END) AS human_recent,
+                COALESCE(SUM(CASE WHEN source = 'ai' AND created_at >= NOW() - INTERVAL 7 DAY THEN tokens_used ELSE 0 END), 0) AS tokens_recent
+              FROM child_ai_analysis`)
+  ])
+
+  return {
+    analyses: {
+      human_active: Number(humanActiveRow ? humanActiveRow.n : 0),
+      ai_active: Number(aiActiveRow ? aiActiveRow.n : 0),
+      human_total: Number(humanTotalRow ? humanTotalRow.n : 0),
+      ai_total: Number(aiTotalRow ? aiTotalRow.n : 0),
+      tokens_total: Number(aiTokenRow ? aiTokenRow.n : 0),
+      children_with_analysis: Number(childWithAnalysisRow ? childWithAnalysisRow.n : 0)
+    },
+    corrections: {
+      total: Number(correctionRow ? correctionRow.n : 0)
+    },
+    style_pack: {
+      active_version: activePackRow ? Number(activePackRow.version) : null,
+      based_on_count: activePackRow ? Number(activePackRow.based_on_count) : 0,
+      created_at: activePackRow ? activePackRow.created_at : null,
+      total_versions: Number(packCountRow ? packCountRow.n : 0)
+    },
+    recent_7d: {
+      ai_count: Number(last7Row && last7Row.ai_recent ? last7Row.ai_recent : 0),
+      human_count: Number(last7Row && last7Row.human_recent ? last7Row.human_recent : 0),
+      tokens_used: Number(last7Row && last7Row.tokens_recent ? last7Row.tokens_recent : 0)
+    }
+  }
 }
 
 /** 按当前 mode 拿展示分析。 */
@@ -981,7 +1159,10 @@ async function getDisplayAnalysis(childId, opts = {}) {
     return (await getLatestActiveAiByChild(childId)) || (await getLatestActiveHumanByChild(childId))
   }
   try {
-    return await generateAiAnalysis(childId)
+    return await generateAiAnalysis(childId, {
+      actor_employee_id: opts.actor_employee_id,
+      actor_admin_id: opts.actor_admin_id
+    })
   } catch (err) {
     return (await getLatestActiveAiByChild(childId)) || (await getLatestActiveHumanByChild(childId))
   }
@@ -1007,6 +1188,9 @@ module.exports = {
   getCorrectionReasonStats,
   getEmployeeDisplayAnalysis,
   getDisplayAnalysis,
+  getOverviewStats,
+  bulkGenerateAiAnalyses,
+  getBulkStatus,
   safeAnalysis,
   safeCorrection,
   getActiveStylePack,

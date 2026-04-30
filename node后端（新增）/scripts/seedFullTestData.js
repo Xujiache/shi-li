@@ -1,3 +1,9 @@
+// 生产环境守卫：禁止在 prod 跑测试 seed（含弱默认密码）
+if (process.env.NODE_ENV === 'production' && process.env.ALLOW_SEED_IN_PRODUCTION !== '1') {
+  console.error('[SEED] 拒绝在生产环境运行测试 seed。如确需运行，临时设置 ALLOW_SEED_IN_PRODUCTION=1。')
+  process.exit(1)
+}
+
 const { query, execute, queryOne } = require('../utils/db')
 const logger = require('../utils/logger')
 const { hashPassword } = require('../utils/bcrypt')
