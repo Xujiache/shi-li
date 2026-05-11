@@ -214,11 +214,38 @@
     q: undefined as string | undefined,
     status: undefined as string | undefined,
     level: undefined as string | undefined,
-    assigned_employee_id: undefined as number | undefined
+    assigned_employee_id: undefined as number | undefined,
+    assigned: undefined as 'unassigned' | 'assigned' | undefined,
+    source: undefined as 'miniprogram' | 'employee' | 'transferred' | undefined
   })
 
   const searchItems = [
     { label: '关键词', key: 'q', type: 'input', props: { placeholder: '姓名/手机号/编号' } },
+    {
+      label: '分配',
+      key: 'assigned',
+      type: 'select',
+      props: {
+        options: [
+          { label: '全部', value: undefined },
+          { label: '待分配池', value: 'unassigned' },
+          { label: '已分配', value: 'assigned' }
+        ]
+      }
+    },
+    {
+      label: '来源',
+      key: 'source',
+      type: 'select',
+      props: {
+        options: [
+          { label: '全部', value: undefined },
+          { label: '小程序注册', value: 'miniprogram' },
+          { label: '员工建档', value: 'employee' },
+          { label: '转入', value: 'transferred' }
+        ]
+      }
+    },
     {
       label: '状态',
       key: 'status',
@@ -367,7 +394,9 @@
       q: undefined,
       status: undefined,
       level: undefined,
-      assigned_employee_id: undefined
+      assigned_employee_id: undefined,
+      assigned: undefined,
+      source: undefined
     }
   }
 

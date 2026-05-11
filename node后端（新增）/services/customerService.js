@@ -599,6 +599,7 @@ async function listCustomersForAdmin(params = {}) {
   }
   if (params.status) { conditions.push('c.status = ?'); values.push(params.status) }
   if (params.level) { conditions.push('c.level = ?'); values.push(params.level) }
+  if (params.source) { conditions.push('c.source = ?'); values.push(params.source) }
   if (params.assigned_employee_id !== undefined && params.assigned_employee_id !== '') {
     conditions.push('c.assigned_employee_id = ?')
     values.push(Number(params.assigned_employee_id))
@@ -606,6 +607,12 @@ async function listCustomersForAdmin(params = {}) {
   if (params.department_id !== undefined && params.department_id !== '') {
     conditions.push('c.assigned_employee_id IN (SELECT id FROM employees WHERE department_id = ?)')
     values.push(Number(params.department_id))
+  }
+  // 待分配 / 已分配过滤；assigned=unassigned 显示"未分配池"（家长注册后自动落入）
+  if (params.assigned === 'unassigned') {
+    conditions.push('c.assigned_employee_id IS NULL')
+  } else if (params.assigned === 'assigned') {
+    conditions.push('c.assigned_employee_id IS NOT NULL')
   }
 
   const whereClause = `WHERE ${conditions.join(' AND ')}`
@@ -755,6 +762,54 @@ async function listCustomersForExport(params = {}) {
   return rows
 }
 
+/**
+ * 为家长 user 兜底建一条 customers 记录（未分配池）。
+ * 幂等：以 user_id 为锚点，已存在 active 客户则直接返回其 id。
+ *
+ * Why: 小程序家长注册后默认只写 users 表，员工 CRM / 后台「客户」页查的是 customers 表，
+ *      没这条记录就看不到、分不掉。注册即自动建 customer，进入"未分配池"，
+ *      管理员后台一目了然，再走分配流程交给员工。
+ *
+ * @param {{id:number|string, phone?:string, display_name?:string}} user 已落库的 user 对象
+ * @returns {Promise<number|null>} 对应（已有 / 新建）的 customer.id；user 无效则返回 null
+ */
+async function ensureCustomerForUser(user) {
+  if (!user || !user.id) return null
+
+  const existing = await queryOne(
+    'SELECT id FROM customers WHERE user_id = ? AND active = 1 LIMIT 1',
+    [user.id]
+  )
+  if (existing) return Number(existing.id)
+
+  const phone = user.phone ? String(user.phone).trim() : ''
+  const displayName = String(user.display_name || phone || '家长').trim()
+
+  let lastErr = null
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const customerNo = generateCustomerNo()
+    try {
+      const result = await execute(
+        `INSERT INTO customers (
+          customer_no, user_id, display_name, phone, gender,
+          source, status, level, tags, assigned_employee_id,
+          active, created_by, next_follow_up_text, remark
+        ) VALUES (?, ?, ?, ?, 'unknown', 'miniprogram', 'potential', 'C', JSON_ARRAY(), NULL, 1, NULL, '', '')`,
+        [customerNo, Number(user.id), displayName, phone]
+      )
+      return Number(result.insertId)
+    } catch (err) {
+      lastErr = err
+      // customer_no UNIQUE 冲突时重试；其他错误直接抛
+      if (err && err.code === 'ER_DUP_ENTRY' && String(err.sqlMessage || '').includes('uk_customers_no')) {
+        continue
+      }
+      throw err
+    }
+  }
+  throw lastErr || createAppError('家长客户档案生成失败', StatusCodes.INTERNAL_SERVER_ERROR)
+}
+
 module.exports = {
   listCustomers,
   getCustomerDetail,
@@ -764,6 +819,7 @@ module.exports = {
   searchCustomers,
   setCustomerReminder,
   linkUserByPhone,
+  ensureCustomerForUser,
   listAttachments,
   addAttachment,
   deleteAttachment,

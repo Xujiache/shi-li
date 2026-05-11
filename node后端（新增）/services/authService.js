@@ -13,6 +13,22 @@ const {
   createUser,
   buildTokenPayload
 } = require('./userService')
+const { ensureCustomerForUser } = require('./customerService')
+const logger = require('../utils/logger')
+
+/**
+ * 给家长用户兜底建一条 customers 记录（未分配池）。失败不阻塞登录/注册。
+ * @param {Record<string, any>} user
+ * @returns {Promise<void>}
+ */
+async function syncMobileCustomer(user) {
+  try {
+    await ensureCustomerForUser(user)
+  } catch (err) {
+    // 客户档案是辅助数据，建失败不影响主流程；记日志方便后续排查
+    logger.warn('ensureCustomerForUser failed for user ' + (user && user.id) + ': ' + (err && err.message))
+  }
+}
 
 /**
  * 构造认证响应。
@@ -50,6 +66,7 @@ async function registerByPhone(payload) {
     displayName: phone
   })
 
+  await syncMobileCustomer(user)
   return buildAuthResult(user, USER_TYPES.MOBILE)
 }
 
@@ -81,6 +98,10 @@ async function loginByPhone(payload, userType = USER_TYPES.MOBILE) {
 
   await touchLastLogin(user.id)
   const latest = await findUserById(user.id)
+  // 小程序家长登录时兜底建 customer（老用户首次回到 App 就能被纳入"未分配池"）
+  if (userType === USER_TYPES.MOBILE) {
+    await syncMobileCustomer(latest)
+  }
   return buildAuthResult(latest, userType)
 }
 
@@ -103,6 +124,7 @@ async function loginByWechat(payload) {
   ensureLoginableUser(user)
   await touchLastLogin(user.id)
   const latest = await findUserById(user.id)
+  await syncMobileCustomer(latest)
   return buildAuthResult(latest, USER_TYPES.MOBILE)
 }
 

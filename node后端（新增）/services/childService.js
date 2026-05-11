@@ -130,6 +130,8 @@ function normalizeChild(row) {
     avatar_file_id: row.avatar_url || '',
     active: row.active !== 0,
     parent_user_no: row.parent_user_no || '',
+    parent_display_name: row.parent_display_name || '',
+    parent_user_id: row.user_id != null ? Number(row.user_id) : null,
     created_at: row.created_at,
     updated_at: row.updated_at
   }
@@ -511,7 +513,7 @@ async function listChildrenForAdmin(params) {
   )
   const rows = await query(
     `
-      SELECT c.*, u.user_no AS parent_user_no
+      SELECT c.*, u.user_no AS parent_user_no, u.display_name AS parent_display_name
       FROM children c
       LEFT JOIN users u ON u.id = c.user_id
       ${whereClause}
@@ -537,7 +539,7 @@ async function listChildrenForAdmin(params) {
 async function getAdminChildDetail(childId) {
   const row = await queryOne(
     `
-      SELECT c.*, u.user_no AS parent_user_no
+      SELECT c.*, u.user_no AS parent_user_no, u.display_name AS parent_display_name
       FROM children c
       LEFT JOIN users u ON u.id = c.user_id
       WHERE c.id = ?

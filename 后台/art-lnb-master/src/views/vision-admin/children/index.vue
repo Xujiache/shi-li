@@ -440,6 +440,8 @@
         { prop: 'dob', label: '出生日期', width: 110 },
         { prop: 'school', label: '学校', width: 120 },
         { prop: 'class_name', label: '班级', width: 100 },
+        { prop: 'parent_user_no', label: '家长编号', width: 110 },
+        { prop: 'parent_display_name', label: '家长昵称', width: 110 },
         { prop: 'parent_phone', label: '家长手机号', width: 120 },
         { prop: 'vision_r', label: '右眼视力', width: 90 },
         { prop: 'vision_l', label: '左眼视力', width: 90 },
@@ -481,7 +483,8 @@
   const exportData = computed(() => (Array.isArray(data.value) ? data.value : []))
   const exportHeaders: Record<string, string> = {
     name: '姓名', gender: '性别', dob: '出生日期',
-    school: '学校', class_name: '班级', parent_phone: '家长手机号',
+    school: '学校', class_name: '班级',
+    parent_user_no: '家长编号', parent_display_name: '家长昵称', parent_phone: '家长手机号',
     vision_r: '右眼视力', vision_l: '左眼视力', vision_both: '双眼视力',
     risk_level: '风险等级', updated_at: '更新时间'
   }

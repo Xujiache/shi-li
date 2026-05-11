@@ -336,6 +336,77 @@ async function getUserDetail(userId) {
 }
 
 /**
+ * 后台用户全景：用户基础信息 + 名下孩子列表 + 对应 customer（若已建档）。
+ * Why: 后台「家长↔孩子」验证只靠现有 user detail 看不到绑定关系；
+ *      暴露这层让管理员一眼看到该家长建过哪几个孩子档案、是否已纳入客户体系。
+ * @param {number|string} userId
+ * @returns {Promise<{user:Record<string,any>, children:Array<Record<string,any>>, customer:Record<string,any>|null}>}
+ */
+async function getAdminUserOverview(userId) {
+  const user = await getUserDetail(userId)
+  const children = await query(
+    `SELECT id, child_no, name, gender, dob, age, school, grade_name, class_name,
+            parent_phone, avatar_url, vision_r, vision_l, risk_level,
+            created_at, updated_at
+     FROM children
+     WHERE user_id = ?
+     ORDER BY updated_at DESC, id DESC`,
+    [userId]
+  )
+  const customer = await queryOne(
+    `SELECT c.id, c.customer_no, c.display_name, c.phone, c.status, c.level,
+            c.assigned_employee_id, c.source, c.created_at, c.updated_at,
+            e.display_name AS assigned_employee_name,
+            d.name AS department_name
+     FROM customers c
+     LEFT JOIN employees e ON e.id = c.assigned_employee_id
+     LEFT JOIN departments d ON d.id = e.department_id
+     WHERE c.user_id = ? AND c.active = 1
+     ORDER BY c.id DESC
+     LIMIT 1`,
+    [userId]
+  )
+  return {
+    user,
+    children: children.map((r) => ({
+      id: Number(r.id),
+      _id: String(r.id),
+      child_no: r.child_no || '',
+      name: r.name || '',
+      gender: r.gender || '',
+      dob: r.dob || '',
+      age: r.age != null ? Number(r.age) : null,
+      school: r.school || '',
+      grade_name: r.grade_name || '',
+      class_name: r.class_name || '',
+      parent_phone: r.parent_phone || '',
+      avatar_url: r.avatar_url || '',
+      vision_r: r.vision_r || '',
+      vision_l: r.vision_l || '',
+      risk_level: r.risk_level || '',
+      created_at: r.created_at,
+      updated_at: r.updated_at
+    })),
+    customer: customer
+      ? {
+          id: Number(customer.id),
+          customer_no: customer.customer_no,
+          display_name: customer.display_name,
+          phone: customer.phone,
+          status: customer.status,
+          level: customer.level,
+          source: customer.source,
+          assigned_employee_id: customer.assigned_employee_id != null ? Number(customer.assigned_employee_id) : null,
+          assigned_employee_name: customer.assigned_employee_name || '',
+          department_name: customer.department_name || '',
+          created_at: customer.created_at,
+          updated_at: customer.updated_at
+        }
+      : null
+  }
+}
+
+/**
  * 由后台创建用户。
  * @param {{phone: string, passwordHash: string, display_name?: string, avatar_url?: string, is_admin?: boolean, active?: boolean}} payload 创建参数。
  * @returns {Promise<Record<string, any>>} 新建用户。
@@ -439,6 +510,7 @@ module.exports = {
   updateUserProfile,
   listUsers,
   getUserDetail,
+  getAdminUserOverview,
   createUserByAdmin,
   updateUserByAdmin,
   deleteUser,

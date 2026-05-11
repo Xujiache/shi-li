@@ -2,7 +2,7 @@
   <ElDialog
     v-model="dialogVisible"
     :title="dialogType === 'add' ? '新增用户' : '编辑用户'"
-    width="420px"
+    width="560px"
     align-center
     @closed="formRef?.resetFields()"
   >
@@ -29,6 +29,46 @@
         <ElSwitch v-model="formData.active" />
       </ElFormItem>
     </ElForm>
+
+    <!-- 编辑模式下显示家长↔孩子绑定与客户档案，便于排查"小程序建档了员工App搜不到"的问题 -->
+    <template v-if="dialogType === 'edit'">
+      <ElDivider content-position="left">名下孩子档案</ElDivider>
+      <div v-if="detailLoading" class="relation-empty">加载中...</div>
+      <div v-else-if="!children.length" class="relation-empty">
+        该家长名下还没有孩子档案
+      </div>
+      <ElTable v-else :data="children" size="small" border>
+        <ElTableColumn prop="child_no" label="档案编号" width="110" />
+        <ElTableColumn prop="name" label="姓名" width="80" />
+        <ElTableColumn prop="gender" label="性别" width="60" />
+        <ElTableColumn prop="dob" label="出生日期" width="110" />
+        <ElTableColumn label="学校 / 班级">
+          <template #default="{ row }">
+            {{ [row.school, row.grade_name, row.class_name].filter(Boolean).join(' / ') || '-' }}
+          </template>
+        </ElTableColumn>
+        <ElTableColumn prop="updated_at" label="更新时间" width="160" />
+      </ElTable>
+
+      <ElDivider content-position="left">客户档案 (CRM)</ElDivider>
+      <div v-if="!customer" class="relation-empty">
+        尚未生成 CRM 客户档案 (家长重新登录小程序后会自动生成)
+      </div>
+      <div v-else class="customer-box">
+        <div class="row"><span class="label">客户编号</span><span>{{ customer.customer_no }}</span></div>
+        <div class="row">
+          <span class="label">归属员工</span>
+          <span v-if="customer.assigned_employee_name">
+            {{ customer.assigned_employee_name }}
+            <span class="muted">（{{ customer.department_name || '无部门' }}）</span>
+          </span>
+          <ElTag v-else type="warning" size="small">待分配</ElTag>
+        </div>
+        <div class="row"><span class="label">来源</span><span>{{ sourceLabel(customer.source) }}</span></div>
+        <div class="row"><span class="label">创建时间</span><span>{{ customer.created_at }}</span></div>
+      </div>
+    </template>
+
     <template #footer>
       <ElButton @click="dialogVisible = false">取消</ElButton>
       <ElButton type="primary" :loading="submitting" @click="handleSubmit">确定</ElButton>
@@ -40,9 +80,71 @@
   import type { FormInstance, FormRules } from 'element-plus'
   import {
     usersCreate,
-    usersUpdate
+    usersUpdate,
+    usersDetail
   } from '@/api/vision-admin'
   import CloudImageField from '@/components/business/cloudbase/cloud-image-field.vue'
+
+  interface ChildRow {
+    id: number
+    _id?: string
+    child_no?: string
+    name?: string
+    gender?: string
+    dob?: string
+    school?: string
+    grade_name?: string
+    class_name?: string
+    updated_at?: string
+  }
+
+  interface CustomerSummary {
+    id: number
+    customer_no: string
+    display_name: string
+    phone: string
+    status: string
+    level: string
+    source: string
+    assigned_employee_id: number | null
+    assigned_employee_name: string
+    department_name: string
+    created_at?: string
+    updated_at?: string
+  }
+
+  const children = ref<ChildRow[]>([])
+  const customer = ref<CustomerSummary | null>(null)
+  const detailLoading = ref(false)
+
+  function sourceLabel(s: string) {
+    const m: Record<string, string> = {
+      miniprogram: '小程序注册',
+      employee: '员工建档',
+      transferred: '转入'
+    }
+    return m[s] || s || '-'
+  }
+
+  async function loadRelations(userId: string) {
+    if (!userId) {
+      children.value = []
+      customer.value = null
+      return
+    }
+    detailLoading.value = true
+    try {
+      const r: any = await usersDetail({ user_id: userId })
+      const data = r?.data ?? r
+      children.value = Array.isArray(data?.children) ? data.children : []
+      customer.value = data?.customer || null
+    } catch {
+      children.value = []
+      customer.value = null
+    } finally {
+      detailLoading.value = false
+    }
+  }
 
   interface UserRow {
     _id?: string
@@ -115,6 +217,12 @@
           active: type === 'edit' && row?.active != null ? row.active : true
         })
         nextTick(() => formRef.value?.clearValidate())
+        if (type === 'edit' && row?._id) {
+          loadRelations(String(row._id))
+        } else {
+          children.value = []
+          customer.value = null
+        }
       }
     },
     { immediate: true }
@@ -157,3 +265,32 @@
     })
   }
 </script>
+
+<style scoped>
+.relation-empty {
+  padding: 12px 0;
+  color: #909399;
+  font-size: 13px;
+}
+.customer-box {
+  padding: 8px 12px;
+  background: #fafafa;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.customer-box .row {
+  display: flex;
+  align-items: center;
+  padding: 4px 0;
+  gap: 8px;
+}
+.customer-box .label {
+  width: 80px;
+  color: #909399;
+  flex-shrink: 0;
+}
+.customer-box .muted {
+  color: #c0c4cc;
+  font-size: 12px;
+}
+</style>

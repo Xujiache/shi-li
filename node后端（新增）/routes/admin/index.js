@@ -26,6 +26,7 @@ const {
 const {
   listUsers,
   getUserDetail,
+  getAdminUserOverview,
   createUserByAdmin,
   updateUserByAdmin,
   deleteUser,
@@ -116,8 +117,10 @@ async function usersListHandler(req, res) {
  * @returns {Promise<void>}
  */
 async function userDetailHandler(req, res) {
-  const user = await getUserDetail(req.params.id)
-  success(res, { user })
+  const overview = await getAdminUserOverview(req.params.id)
+  // 同时返回 { user, children, customer }：旧前端只取 user 时不破坏；
+  // 新前端取 children/customer 验证家长↔孩子绑定关系
+  success(res, overview)
 }
 
 /**
